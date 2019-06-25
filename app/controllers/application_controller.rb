@@ -149,7 +149,7 @@ helper :all
 
   
   def find_finance_managers
-    Privilege.find_by_name('FinanceControl').users
+    Privilege.find_by(:name =>'FinanceControl').users
   end
 
   def permission_denied
@@ -172,7 +172,7 @@ helper :all
   end
 
   def configuration_settings_for_hr
-    hr = Configuration.find_by_config_value("HR")
+    hr = Configuration.find_by(:config_value =>'HR')
     if hr.nil?
       redirect_to :controller => 'user', :action => 'dashboard'
       flash[:notice] = "#{t('flash_msg4')}"
@@ -182,7 +182,7 @@ helper :all
   
 
   def configuration_settings_for_finance
-    finance = Configuration.find_by_config_value("Finance")
+    finance = Configuration.find_by(:config_value => 'Finance')
     if finance.nil?
       redirect_to :controller => 'user', :action => 'dashboard'
       flash[:notice] = "#{t('flash_msg4')}"
@@ -324,7 +324,7 @@ helper :all
     server_time = Time.now
     server_time_to_gmt = server_time.getgm
     @local_tzone_time = server_time
-    time_zone = Configuration.find_by_config_key("TimeZone")
+    time_zone = Configuration.find_by(:config_key =>"TimeZone")
     unless time_zone.nil?
       unless time_zone.config_value.nil?
         zone = TimeZone.find(time_zone.config_value)
@@ -344,7 +344,7 @@ helper :all
 
   private
   def set_user_language
-    lan = Configuration.find_by_config_key("Locale")
+    lan = Configuration.find_by(:config_key =>"Locale")
     I18n.default_locale = :en
     Translator.fallback(true)
     if session[:language].nil?
