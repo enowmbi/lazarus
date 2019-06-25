@@ -44,18 +44,18 @@ NETWORK_STATES                   = [["#{I18n.t('online')}",'Online'],["#{I18n.t(
   class << self
 
     def get_config_value(key)
-      c = find_by_config_key(key)
+      c = find_by(:config_key => key)
       c.nil? ? nil : c.config_value
     end
   
     def save_institution_logo(upload)
-      directory, filename = "#{RAILS_ROOT}/public/uploads/image", 'institute_logo.jpg'
+      directory, filename = "#{Rais.root}/public/uploads/image", 'institute_logo.jpg'
       path = File.join(directory, filename) # create the file path
       File.open(path, "wb") { |f| f.write(upload['datafile'].read) } # write the file
     end
 
     def available_modules
-      modules = find_all_by_config_key('AvailableModules')
+      modules = find_by(:config_key =>'AvailableModules')
       modules.map(&:config_value)
     end
 
@@ -64,7 +64,7 @@ NETWORK_STATES                   = [["#{I18n.t('online')}",'Online'],["#{I18n.t(
     end
 
     def set_value(key, value)
-      config = find_by_config_key(key)
+      config = find_by(:config_key => key)
       config.nil? ?
         Configuration.create(:config_key => key, :config_value => value) :
         config.update_attribute(:config_value, value)
@@ -83,7 +83,7 @@ NETWORK_STATES                   = [["#{I18n.t('online')}",'Online'],["#{I18n.t(
     end
 
     def default_country
-      default_country_value = self.find_by_config_key('DefaultCountry').config_value.to_i
+      default_country_value = self.find_by(:config_key =>'DefaultCountry').config_value.to_i
       return default_country_value
     end
     
@@ -103,7 +103,7 @@ NETWORK_STATES                   = [["#{I18n.t('online')}",'Online'],["#{I18n.t(
       server_time = Time.now
       server_time_to_gmt = server_time.getgm
       local_tzone_time = server_time
-      time_zone = Configuration.find_by_config_key("TimeZone")
+      time_zone = Configuration.find_by(:config_key => "TimeZone")
       unless time_zone.nil?
         unless time_zone.config_value.nil?
           zone = TimeZone.find(time_zone.config_value)
