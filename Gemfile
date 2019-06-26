@@ -39,6 +39,9 @@ gem 'bootsnap', '>= 1.1.0', require: false
 # Add declarative authorization
 gem 'ae_declarative_authorization'
 
+#Add erd to generate entity relationship diagrams
+gem 'rails-erd'
+
 group :development, :test do
   # Call 'byebug' anywhere in the code to stop execution and get a debugger console
   gem 'byebug', platforms: [:mri, :mingw, :x64_mingw]
