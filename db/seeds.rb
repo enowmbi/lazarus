@@ -20,14 +20,14 @@
   {"config_key" => "DefaultCountry"                  ,"config_value" => "76"},
   {"config_key" => "FirstTimeLoginEnable"            ,"config_value" => "0"}
 ].each do |param|
-  Configuration.find_or_create_by(:config_key => param["config_key"],:config_value =>param["config_value"])
+  Config.find_or_create_by(:config_key => param["config_key"],:config_value =>param["config_value"])
 end
 
 [
   {"config_key" => "AvailableModules"                ,"config_value" => "HR"},
   {"config_key" => "AvailableModules"                ,"config_value" => "Finance"}
 ].each do |param|
-  Configuration.find_or_create_by(:config_key =>param["config_key"],:config_value =>param["config_value"])
+  Config.find_or_create_by(:config_key =>param["config_key"],:config_value =>param["config_value"])
 end
 
 if GradingLevel.count == 0
