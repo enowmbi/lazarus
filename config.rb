@@ -16,7 +16,7 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class Configuration < ActiveRecord::Base
+class Config < ActiveRecord::Base
 
 STUDENT_ATTENDANCE_TYPE_OPTIONS = [["#{I18n.t('daily_text')}", "Daily"], ["#{I18n.t('subject_wise_text')}", "SubjectWise"]]
 
@@ -30,7 +30,7 @@ NETWORK_STATES                   = [["#{I18n.t('online')}",'Online'],["#{I18n.t(
 
   def validate
     if self.config_key == "StudentAttendanceType"
-      errors.add_to_base("#{I18n.t('student_attendance_type_should_be_one')} #{STUDENT_ATTENDANCE_TYPE_OPTIONS}") unless Configuration::STUDENT_ATTENDANCE_TYPE_OPTIONS.collect{|d| d[1] == self.config_value}.include?(true)
+      errors.add_to_base("#{I18n.t('student_attendance_type_should_be_one')} #{STUDENT_ATTENDANCE_TYPE_OPTIONS}") unless Config::STUDENT_ATTENDANCE_TYPE_OPTIONS.collect{|d| d[1] == self.config_value}.include?(true)
     end
     if self.config_key == "NetworkState"
       errors.add_to_base("#{I18n.t('network_state_should_be_one')} #{NETWORK_STATES}") unless NETWORK_STATES.collect{|d| d[1] == self.config_value}.include?(true)
@@ -66,7 +66,7 @@ NETWORK_STATES                   = [["#{I18n.t('online')}",'Online'],["#{I18n.t(
     def set_value(key, value)
       config = find_by(:config_key => key)
       config.nil? ?
-        Configuration.create(:config_key => key, :config_value => value) :
+        Config.create(:config_key => key, :config_value => value) :
         config.update_attribute(:config_value, value)
     end
 
@@ -103,7 +103,7 @@ NETWORK_STATES                   = [["#{I18n.t('online')}",'Online'],["#{I18n.t(
       server_time = Time.now
       server_time_to_gmt = server_time.getgm
       local_tzone_time = server_time
-      time_zone = Configuration.find_by(:config_key => "TimeZone")
+      time_zone = Config.find_by(:config_key => "TimeZone")
       unless time_zone.nil?
         unless time_zone.config_value.nil?
           zone = TimeZone.find(time_zone.config_value)
