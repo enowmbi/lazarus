@@ -35,7 +35,7 @@ helper :all
     if session[:user_id].present?
       unless (controller_name == "user") and ["first_login_change_password","login","logout","forgot_password"].include? action_name
         user = User.active.find(session[:user_id])
-        setting = Configuration.get_config_value('FirstTimeLoginEnable')
+        setting = Config.get_config_value('FirstTimeLoginEnable')
         if setting == "1" and user.is_first_login != false
           flash[:notice] = "#{t('first_login_attempt')}"
           redirect_to :controller => "user",:action => "first_login_change_password",:id => user.username
@@ -53,8 +53,8 @@ helper :all
 
   def set_variables
     unless @current_user.nil?
-      @attendance_type = Configuration.get_config_value('StudentAttendanceType') unless @current_user.student?
-      @modules = Configuration.available_modules
+      @attendance_type = Config.get_config_value('StudentAttendanceType') unless @current_user.student?
+      @modules = Config.available_modules
     end
   end
 
@@ -172,7 +172,7 @@ helper :all
   end
 
   def configuration_settings_for_hr
-    hr = Configuration.find_by(:config_value =>'HR')
+    hr = Config.find_by(:config_value =>'HR')
     if hr.nil?
       redirect_to :controller => 'user', :action => 'dashboard'
       flash[:notice] = "#{t('flash_msg4')}"
@@ -182,7 +182,7 @@ helper :all
   
 
   def configuration_settings_for_finance
-    finance = Configuration.find_by(:config_value => 'Finance')
+    finance = Config.find_by(:config_value => 'Finance')
     if finance.nil?
       redirect_to :controller => 'user', :action => 'dashboard'
       flash[:notice] = "#{t('flash_msg4')}"
@@ -324,7 +324,7 @@ helper :all
     server_time = Time.now
     server_time_to_gmt = server_time.getgm
     @local_tzone_time = server_time
-    time_zone = Configuration.find_by(:config_key =>"TimeZone")
+    time_zone = Config.find_by(:config_key =>"TimeZone")
     unless time_zone.nil?
       unless time_zone.config_value.nil?
         zone = TimeZone.find(time_zone.config_value)
@@ -344,7 +344,7 @@ helper :all
 
   private
   def set_user_language
-    lan = Configuration.find_by(:config_key =>"Locale")
+    lan = Config.find_by(:config_key =>"Locale")
     I18n.default_locale = :en
     Translator.fallback(true)
     if session[:language].nil?
