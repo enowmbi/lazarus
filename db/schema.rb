@@ -621,15 +621,15 @@ ActiveRecord::Schema.define(version: 0) do
     t.datetime "updated_at"
   end
 
-  create_table "configurations", :force => true do |t|
+  create_table "configs", :force => true do |t|
     t.string  "config_key"
     t.string  "config_value"
     t.integer "school_id"
   end
 
-  add_index "configurations", ["config_key"], :name => "index_configurations_on_config_key"
-  add_index "configurations", ["config_value"], :name => "index_configurations_on_config_value"
-  add_index "configurations", ["school_id"], :name => "index_configurations_on_school_id"
+  add_index "configs", ["config_key"], :name => "index_configs_on_config_key"
+  add_index "configs", ["config_value"], :name => "index_configs_on_config_value"
+  add_index "configs", ["school_id"], :name => "index_configs_on_school_id"
 
   create_table "countries", :force => true do |t|
     t.string "name"
