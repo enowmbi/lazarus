@@ -346,7 +346,7 @@ helper :all
   def set_user_language
     lan = Config.find_by(:config_key =>"Locale")
     I18n.default_locale = :en
-    Translator.fallback(true)
+    # Translator.fallback(true)
     if session[:language].nil?
       I18n.locale = lan.config_value
     else
