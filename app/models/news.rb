@@ -24,10 +24,10 @@ class News < ActiveRecord::Base
 
   validates_presence_of :title, :content
 
-  default_scope :order => 'created_at DESC'
+  default_scope {order('created_at DESC')}
 
   cattr_reader :per_page
-  xss_terminate :except => [:content]
+  # xss_terminate :except => [:content]
   @@per_page = 12
 
   def self.get_latest
