@@ -24,6 +24,8 @@ module Lazarus
 
     # add /lib to autoload path
     config.autoload_paths += %W(#{config.root}/lib)
+    config.autoload_paths += %W(#{config.root}/app/models/hr)
+    config.autoload_paths += %W(#{config.root}/app/models/finance)
 
     # Settings in config/environments/* take precedence over those specified here.
     # Application configuration can go into files in config/initializers
