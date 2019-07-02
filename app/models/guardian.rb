@@ -23,11 +23,11 @@ class Guardian < ActiveRecord::Base
 
   validates_presence_of :first_name, :relation,:ward_id
   validates_format_of     :email, :with => /^[A-Z0-9._%-]+@([A-Z0-9-]+\.)+[A-Z]{2,4}$/i,   :allow_blank=>true,
-    :message => "#{t('must_be_a_valid_email_address')}"
+    :message => "#{I18n.t('must_be_a_valid_email_address')}"
   before_destroy :immediate_contact_nil
 
   def validate
-    errors.add(:dob, "#{t('cant_be_a_future_date')}.") if self.dob > Date.today unless self.dob.nil?
+    errors.add(:dob, "#{I18n.t('cant_be_a_future_date')}.") if self.dob > Date.today unless self.dob.nil?
   end
 
   def is_immediate_contact?
@@ -56,7 +56,7 @@ class Guardian < ActiveRecord::Base
       u.username = "p"+student.admission_no.to_s
       u.password = "p#{student.admission_no.to_s}123"
       u.role = 'Parent'
-      u.email = ( email == '' or User.active.find_by_email(self.email) ) ? "" :self.email.to_s
+      u.email = (email == '' or User.active.find_by_email(self.email) ) ? "" : self.email.to_s
     end 
     self.update_attributes(:user_id => user.id) if user.save
   end
