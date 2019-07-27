@@ -16,13 +16,13 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class Guardian < ActiveRecord::Base
+class Guardian < ApplicationRecord
   belongs_to :country
   belongs_to :ward, :class_name => 'Student'
   belongs_to :user
 
   validates_presence_of :first_name, :relation,:ward_id
-  validates_format_of     :email, :with => /^[A-Z0-9._%-]+@([A-Z0-9-]+\.)+[A-Z]{2,4}$/i,   :allow_blank=>true,
+  validates_format_of     :email, :with => /\A[A-Z0-9._%-]+@([A-Z0-9-]+\.)+[A-Z]{2,4}\z/i,   :allow_blank=>true,
     :message => "#{I18n.t('must_be_a_valid_email_address')}"
   before_destroy :immediate_contact_nil
 
@@ -64,7 +64,7 @@ class Guardian < ActiveRecord::Base
  
 
   def self.shift_user(student)
-    self.find_all_by_ward_id(student.id).each do |g|
+    self.all.find_by_ward_id(student.id).each do |g|
       parent_user = g.user
       parent_user.soft_delete if parent_user.present? and (parent_user.is_deleted==false)
     end

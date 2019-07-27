@@ -16,11 +16,11 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class Event < ActiveRecord::Base
+class Event < ApplicationRecord
   validates_presence_of :title, :description, :start_date, :end_date
 
-  named_scope :holidays, :conditions => {:is_holiday => true}
-  named_scope :exams, :conditions => {:is_exam => true}
+  scope :holidays, lambda{where({:is_holiday => true})}
+  scope :exams, lambda{where({:is_exam => true})}
   has_many :batch_events, :dependent => :destroy
   has_many :employee_department_events, :dependent => :destroy
   has_many :user_events, :dependent => :destroy

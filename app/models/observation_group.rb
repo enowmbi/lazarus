@@ -15,13 +15,13 @@
 #WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #See the License for the specific language governing permissions and
 #limitations under the License.
-class ObservationGroup < ActiveRecord::Base
+class ObservationGroup < ApplicationRecord
   has_many                  :observations
   has_many                  :descriptive_indicators, :through=>:observations
   belongs_to                :cce_grade_set
   has_and_belongs_to_many   :courses
 
-  named_scope :active,:conditions=>{:is_deleted=>false}
+  scope :active,lambda{where(:is_deleted=>false)}
   
   OBSERVATION_KINDS={'0'=>'Scholastic','1'=>'Co Scholastic Activity','3'=>'Co Scholastic Area'}
 

@@ -15,7 +15,7 @@
 #WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #See the License for the specific language governing permissions and
 #limitations under the License.
-class RankingLevel < ActiveRecord::Base
+class RankingLevel < ApplicationRecord
   validates_presence_of :name
   validates_numericality_of :gpa,:if=>:has_gpa
   validates_numericality_of :marks, :if=>:has_cwa

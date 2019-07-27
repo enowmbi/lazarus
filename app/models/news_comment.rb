@@ -16,7 +16,7 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class NewsComment < ActiveRecord::Base
+class NewsComment < ApplicationRecord
   belongs_to :news
   belongs_to :author, :class_name => 'User'
 
@@ -28,6 +28,7 @@ class NewsComment < ActiveRecord::Base
   after_destroy :reload_news_bar
 
   def reload_news_bar
-    ActionController::Base.new.expire_fragment(News.cache_fragment_name)
+    #TODO maybe should be moved to news_comments_controller ActionController::Base.new.expire_fragment(News.cache_fragment_name)
+    ApplicationController.new.expire_fragment(News.cache_fragment_name)
   end
 end

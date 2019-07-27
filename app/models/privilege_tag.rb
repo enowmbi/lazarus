@@ -1,3 +1,3 @@
-class PrivilegeTag < ActiveRecord::Base
+class PrivilegeTag < ApplicationRecord
   has_many :privileges
 end

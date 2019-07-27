@@ -15,7 +15,7 @@
 #WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #See the License for the specific language governing permissions and
 #limitations under the License.
-class BatchStudent < ActiveRecord::Base
+class BatchStudent < ApplicationRecord
   belongs_to :batch
   belongs_to :student
   belongs_to :school

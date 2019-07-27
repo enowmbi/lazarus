@@ -16,7 +16,7 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class ArchivedEmployee < ActiveRecord::Base
+class ArchivedEmployee < ApplicationRecord
   belongs_to  :employee_category
   belongs_to  :employee_position
   belongs_to  :employee_grade
@@ -25,6 +25,7 @@ class ArchivedEmployee < ActiveRecord::Base
   has_many    :archived_employee_bank_details
   has_many    :archived_employee_additional_details
   before_save :status_false
+
 
   def status_false
     unless self.status==0
@@ -39,16 +40,19 @@ class ArchivedEmployee < ActiveRecord::Base
     self.photo_data         = input_data.read
   end
 
-
-  has_attached_file :photo,
-    :styles => {
-    :thumb=> "100x100#",
-    :small  => "150x150>"},
-    :url => "/system/:class/:attachment/:id/:style/:basename.:extension",
-    :path => ":rails_root/public/system/:class/:attachment/:id/:style/:basename.:extension"
+  has_one_attached :photo
 
   def full_name
     "#{first_name} #{middle_name} #{last_name}"
+  end
+
+
+  def thumbnail(input)
+    return input.variant(:resize => '100x100').processed
+  end
+
+  def small(input)
+    return input.variant(:resize => '150x150').processed
   end
 
 end

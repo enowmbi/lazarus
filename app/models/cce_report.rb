@@ -15,7 +15,7 @@
 #WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #See the License for the specific language governing permissions and
 #limitations under the License.
-class CceReport < ActiveRecord::Base
+class CceReport < ApplicationRecord
 
   belongs_to    :batch
   belongs_to    :student
@@ -23,6 +23,6 @@ class CceReport < ActiveRecord::Base
   belongs_to    :observable, :polymorphic=>true
   belongs_to    :exam
 
-  named_scope :scholastic,{:conditions=>{:observable_type=>"FaCriteria"}}
-  named_scope :coscholastic,{:conditions=>{:observable_type=>"Observation"}}
+  scope :scholastic,lambda{where(:observable_type=>"FaCriteria")}
+  scope :co_scholastic,lambda{where(:observable_type=>"Observation")}
 end

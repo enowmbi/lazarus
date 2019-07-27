@@ -1,4 +1,4 @@
-class SubjectAmount < ActiveRecord::Base
+class SubjectAmount < ApplicationRecord
   belongs_to :course
 
   validates_uniqueness_of :code,:scope => :course_id

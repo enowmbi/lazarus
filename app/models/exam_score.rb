@@ -16,7 +16,7 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class ExamScore < ActiveRecord::Base
+class ExamScore < ApplicationRecord
   belongs_to :student
   belongs_to :exam
   belongs_to :grading_level
@@ -32,11 +32,10 @@ class ExamScore < ActiveRecord::Base
 
 
   def check_existing
-    exam_score = ExamScore.find(:first,:conditions => {:exam_id => self.exam_id,:student_id => self.student_id})
+    exam_score = ExamScore.find_by(:exam_id => self.exam_id,:student_id=> self.student_id)
     if exam_score
       self.id = exam_score.id
-      self.instance_variable_set("@new_record",false)    #If the record exists,then make the new record as a copy of the existing one and allow rails to chhose
-                                                         #the update operation instead of insert. 
+      self.instance_variable_set("@new_record",false)    #If the record exists,then make the new record as a copy of the existing one and allow rails to choose the update operation instead of insert. 
     end
     return true
   end
@@ -65,21 +64,21 @@ class ExamScore < ActiveRecord::Base
       batch = student.batch.id
     end
     if type == 'grouped'
-      grouped_exams = GroupedExam.find_all_by_batch_id(batch)
+      grouped_exams = GroupedExam.where(["batch_id =?",batch])
       exam_groups = []
       grouped_exams.each do |x|
         eg = ExamGroup.find(x.exam_group_id)
         exam_groups.push ExamGroup.find(x.exam_group_id)
       end
     else
-      exam_groups = ExamGroup.find_all_by_batch_id(batch)
+      exam_groups = ExamGroup.where(["batch_id =?",batch])
     end
     total_marks = 0
     exam_groups.each do |exam_group|
       unless exam_group.exam_type == 'Grades'
-        exam = Exam.find_by_subject_id_and_exam_group_id(subject.id,exam_group.id)
+        exam = Exam.find_by(:subject_id =>subject.id,:exam_group_id =>exam_group.id)
         unless exam.nil?
-          exam_score = ExamScore.find_by_student_id(student.id, :conditions=>{:exam_id=>exam.id})
+          exam_score = ExamScore.find_by(:student_id =>student.id, :exam_id=>exam.id)
           marks = exam_score.nil? ? 0 : exam_score.marks.nil? ? 0 : exam_score.marks
           total_marks = total_marks + marks unless exam_score.nil?
         end
@@ -91,7 +90,7 @@ class ExamScore < ActiveRecord::Base
   
 
   def batch_wise_aggregate(student,batch)
-    check = ExamGroup.find_all_by_batch_id(batch.id)
+    check = ExamGroup.where(["batch_id =?",batch.id])
     var = []
     check.each do |x|
       if x.exam_type == 'Grades'
@@ -99,9 +98,9 @@ class ExamScore < ActiveRecord::Base
       end
     end
     if var.empty?
-      grouped_exam = GroupedExam.find_all_by_batch_id(batch.id)
+      grouped_exam = GroupedExam.where(["batch_id =?",batch.id])
       if grouped_exam.empty?
-        exam_groups = ExamGroup.find_all_by_batch_id(batch.id)
+        exam_groups = ExamGroup.where(["batch_id =?",batch.id])
       else
         exam_groups = []
         grouped_exam.each do |x|

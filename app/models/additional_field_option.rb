@@ -1,4 +1,4 @@
-class AdditionalFieldOption < ActiveRecord::Base
+class AdditionalFieldOption < ApplicationRecord
 
   belongs_to :additional_field
 

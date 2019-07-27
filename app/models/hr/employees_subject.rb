@@ -16,7 +16,7 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class EmployeesSubject < ActiveRecord::Base
+class EmployeesSubject < ApplicationRecord
     belongs_to :employee
     belongs_to :subject
     has_one :batch,:through=>:subject

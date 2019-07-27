@@ -15,7 +15,7 @@
 #WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #See the License for the specific language governing permissions and
 #limitations under the License.
-class CceGrade < ActiveRecord::Base
+class CceGrade < ApplicationRecord
 #  has_many      :assessment_scores
   belongs_to    :cce_grade_set
   validates_presence_of :name

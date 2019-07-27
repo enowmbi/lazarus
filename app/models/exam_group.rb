@@ -16,7 +16,7 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class ExamGroup < ActiveRecord::Base
+class ExamGroup < ApplicationRecord
   validates_presence_of :name
 
   belongs_to :batch
@@ -24,7 +24,9 @@ class ExamGroup < ActiveRecord::Base
 
   has_many :exams, :dependent => :destroy
   before_destroy :removable?
-  belongs_to :cce_exam_category
+  # belongs_to :cce_exam_category   #commented this line in favour of the one below
+  has_many :cce_exam_categories_exam_groups
+  has_many :cce_exam_categories, :through => :cce_exam_categories_exam_groups
 
   accepts_nested_attributes_for :exams
 
@@ -93,7 +95,7 @@ class ExamGroup < ActiveRecord::Base
   def archived_batch_average_marks(marks)
     batch = self.batch
     exams = self.exams
-    batch_students = ArchivedStudent.find_all_by_batch_id(self.batch.id)
+    batch_students = ArchivedStudent.where(["batch_id =?",self.batch.id])
     total_students_marks = 0
     #   total_max_marks = 0
     students_attended = []

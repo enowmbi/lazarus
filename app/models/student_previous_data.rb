@@ -16,7 +16,7 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class StudentPreviousData < ActiveRecord::Base
+class StudentPreviousData < ApplicationRecord
   belongs_to :student
   validates_presence_of :institution
 end

@@ -16,12 +16,12 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class Exam < ActiveRecord::Base
+class Exam < ApplicationRecord
   validates_presence_of :start_time, :end_time
   validates_numericality_of :maximum_marks, :minimum_marks, :allow_nil => true
   validates_presence_of :maximum_marks, :minimum_marks, :if => :validation_should_present?, :on=>:update
   belongs_to :exam_group
-  belongs_to :subject, :conditions => { :is_deleted => false }
+  belongs_to :subject, lambda{where({:is_deleted => false})}
   before_destroy :removable?
   before_save :update_exam_group_date
 
@@ -72,7 +72,7 @@ class Exam < ActiveRecord::Base
   end
 
   def score_for(student_id)
-    exam_score = self.exam_scores.find(:first, :conditions => { :student_id => student_id })
+    exam_score = self.exam_scores.find_by(:student_id => student_id)
     exam_score.nil? ? ExamScore.new : exam_score
   end
 

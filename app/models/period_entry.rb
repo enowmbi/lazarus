@@ -16,7 +16,7 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class PeriodEntry < ActiveRecord::Base
+class PeriodEntry < ApplicationRecord
   belongs_to :batch
   belongs_to :class_timing
   belongs_to :subject

@@ -16,7 +16,7 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class FinanceFeeCollection < ActiveRecord::Base
+class FinanceFeeCollection < ApplicationRecord
   belongs_to :batch
   has_many :finance_fees, :foreign_key =>"fee_collection_id",:dependent=>:destroy
   has_many :finance_transactions, :through => :finance_fees
@@ -54,7 +54,7 @@ class FinanceFeeCollection < ActiveRecord::Base
   end
 
   def fee_table
-    self.finance_fees.all(:conditions=>"is_paid = 0")
+    self.finance_fees.where("is_paid = 0")
   end
 
   def self.shorten_string(string, count)
@@ -69,7 +69,7 @@ class FinanceFeeCollection < ActiveRecord::Base
   end
 
   def check_fee_category
-    finance_fees = FinanceFee.find_all_by_fee_collection_id(self.id)
+    finance_fees = FinanceFee.where(["fee_collection_id =?",self.id])
     flag = 1
     finance_fees.each do |f|
       flag = 0 unless f.transaction_id.nil?
@@ -78,14 +78,14 @@ class FinanceFeeCollection < ActiveRecord::Base
   end
 
   def no_transaction_present
-    f = FinanceFee.find_all_by_fee_collection_id(self.id)
+    f = FinanceFee.where(["fee_collection_id =?",self.id])
     f.reject! {|x|x.transaction_id.nil?} unless f.nil?
     f.blank?
   end
 
   def create_associates
     
-    batch_discounts = BatchFeeDiscount.find_all_by_finance_fee_category_id(self.fee_category_id)
+    batch_discounts = BatchFeeDiscount.where(["finance_fee_category_id = ?",self.fee_category_id])
     batch_discounts.each do |discount|
       discount_attributes = discount.attributes
       discount_attributes.delete "type"
@@ -93,7 +93,7 @@ class FinanceFeeCollection < ActiveRecord::Base
       discount_attributes["finance_fee_collection_id"]= self.id
       BatchFeeCollectionDiscount.create(discount_attributes)
     end
-    category_discount = StudentCategoryFeeDiscount.find_all_by_finance_fee_category_id(self.fee_category_id)
+    category_discount = StudentCategoryFeeDiscount.where(["finance_fee_category_id =?",self.fee_category_id])
     category_discount.each do |discount|
       discount_attributes = discount.attributes
       discount_attributes.delete "type"
@@ -101,7 +101,7 @@ class FinanceFeeCollection < ActiveRecord::Base
       discount_attributes["finance_fee_collection_id"]= self.id
       StudentCategoryFeeCollectionDiscount.create(discount_attributes)
     end
-    student_discount = StudentFeeDiscount.find_all_by_finance_fee_category_id(self.fee_category_id)
+    student_discount = StudentFeeDiscount.where(["finance_fee_category_id = ?",self.fee_category_id])
     student_discount.each do |discount|
       discount_attributes = discount.attributes
       discount_attributes.delete "type"
@@ -109,7 +109,7 @@ class FinanceFeeCollection < ActiveRecord::Base
       discount_attributes["finance_fee_collection_id"]= self.id
       StudentFeeCollectionDiscount.create(discount_attributes)
     end
-    particlulars = FinanceFeeParticular.find_all_by_finance_fee_category_id(self.fee_category_id,:conditions=>"is_deleted=0")
+    particlulars = FinanceFeeParticular.where(["finance_fee_category_id = ? AND is_deleted=0",self.fee_category_id])
     particlulars.each do |p|
       particlulars_attributes = p.attributes
       particlulars_attributes.delete "finance_fee_category_id"
@@ -119,12 +119,11 @@ class FinanceFeeCollection < ActiveRecord::Base
   end
 
   def fees_particulars(student)
-    FeeCollectionParticular.find_all_by_finance_fee_collection_id(self.id,
-      :conditions => ["((student_category_id IS NULL AND admission_no IS NULL )OR(student_category_id = '#{student.student_category_id}'AND admission_no IS NULL) OR (student_category_id IS NULL AND admission_no = '#{student.admission_no}')) and is_deleted=0"])
+    FeeCollectionParticular.where(["finance_fee_collection_id =?",self.id]).where(["((student_category_id IS NULL AND admission_no IS NULL )OR(student_category_id = '#{student.student_category_id}'AND admission_no IS NULL) OR (student_category_id IS NULL AND admission_no = '#{student.admission_no}')) and is_deleted=0"])
   end
 
   def transaction_total(start_date,end_date)
-    trans = self.finance_transactions.all(:conditions=>"transaction_date >= '#{start_date}' AND transaction_date <= '#{end_date}'")
+    trans = self.finance_transactions.where(["transaction_date >= ? AND transaction_date <=?",start_date,end_date])
     total = trans.map{|t|t.amount}.sum
   end
   
@@ -132,11 +131,11 @@ class FinanceFeeCollection < ActiveRecord::Base
     particulars= self.fees_particulars(student)
     financefee = self.fee_transactions(student.id)
 
-    paid_fees = FinanceTransaction.find(:all,:conditions=>"FIND_IN_SET(id,\"#{financefee.transaction_id}\")") unless financefee.transaction_id.blank?
+    paid_fees = FinanceTransaction.where(["FIND_IN_SET(id,\"#{financefee.transaction_id}\")"]) unless financefee.transaction_id.blank?
 
-    batch_discounts = BatchFeeCollectionDiscount.find_all_by_finance_fee_collection_id(self.id)
-    student_discounts = StudentFeeCollectionDiscount.find_all_by_finance_fee_collection_id_and_receiver_id(self.id,student.id)
-    category_discounts = StudentCategoryFeeCollectionDiscount.find_all_by_finance_fee_collection_id_and_receiver_id(self.id,student.student_category_id)
+    batch_discounts = BatchFeeCollectionDiscount.where(["finance_fee_collection_id =?",self.id])
+    student_discounts = StudentFeeCollectionDiscount.where(["finance_fee_collection_id = ? AND receiver_id = ?",self.id,student.id])
+    category_discounts = StudentCategoryFeeCollectionDiscount.where(["finance_fee_collection_id =? AND receiver_id = ?",self.id,student.student_category_id])
     total_discount = 0
     total_discount += batch_discounts.map{|s| s.discount}.sum unless batch_discounts.nil?
     total_discount += student_discounts.map{|s| s.discount}.sum unless student_discounts.nil?

@@ -15,20 +15,25 @@
 #WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #See the License for the specific language governing permissions and
 #limitations under the License.
-class SchoolDetail < ActiveRecord::Base
+class SchoolDetail < ApplicationRecord
   has_one_attached :logo
-  # has_attached_file :logo,
-  # :styles => { :original=> "150x110#"},
-  # :url => "/system/:class/:attachment/:id_partition/:style/:basename.:extension",
-  # :path => ":rails_root/public/system/:class/:attachment/:id_partition/:style/:basename.:extension",
-  # :default_url  => 'application/app_fedena_logo.png',
-  # :default_path  => ':rails_root/public/images/application/app_fedena_logo.png'
 
+validate :image_type
   VALID_IMAGE_TYPES = ['image/gif', 'image/png','image/jpeg', 'image/jpg']
 
-  # validates_attachment_content_type :logo, :content_type =>VALID_IMAGE_TYPES,
-  # :message=>'Image can only be GIF, PNG, JPG',:if=> Proc.new { |p| !p.logo_file_name.blank? }
-  # validates_attachment_size :logo, :less_than => 512000,
-  # :message=>'must be less than 500 KB.',:if=> Proc.new { |p| p.logo_file_name_changed? }
+  def original
+    return self.logo.variant(:resize => '150x110').processed
+  end
 
+  private
+  def image_type
+    if logo.attached? 
+      if !logo.content_type.in?(VALID_IMAGE_TYPES)
+        errors.add(:logo, " can only be a #{VALID_IMAGE_TYPES.to_sentence(:last_word_connector =>' or ')}")
+      end
+      if logo.byte_size > 512000
+        errors.add(:logo,"must be less than 500KB")
+      end
+    end
+  end
 end

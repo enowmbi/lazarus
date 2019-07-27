@@ -16,7 +16,7 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class StudentPreviousSubjectMark < ActiveRecord::Base
+class StudentPreviousSubjectMark < ApplicationRecord
   belongs_to :student
   validates_presence_of :subject, :mark
 end

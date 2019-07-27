@@ -15,12 +15,12 @@
 #WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #See the License for the specific language governing permissions and
 #limitations under the License.
-class AssessmentScore < ActiveRecord::Base
+class AssessmentScore < ApplicationRecord
   belongs_to :student
   belongs_to :descriptive_indicator
   belongs_to :exam
 
-  named_scope :co_scholastic, {:conditions=>{:exam_id=>nil}}
-  named_scope :scholastic, {:conditions=>['exam_id > 0']}
+  scope :co_scholastic, lambda{where('exam_id = nil')}
+  scope :scholastic, lambda{where('exam_id > 0')}
 #  belongs_to :cce_grade
 end

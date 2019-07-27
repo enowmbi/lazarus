@@ -16,7 +16,7 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class Batch < ActiveRecord::Base
+class Batch < ApplicationRecord
   GRADINGTYPES = {"1"=>"GPA","2"=>"CWA","3"=>"CCE"}
 
   belongs_to :course
@@ -25,8 +25,8 @@ class Batch < ActiveRecord::Base
   has_many :grouped_exam_reports
   has_many :grouped_batches
   has_many :archived_students
-  has_many :grading_levels, ->{where(:is_deleted => false)}
-  has_many :subjects, ->{where(:is_deleted => false)}
+  has_many :grading_levels, lambda{where(:is_deleted => false)}
+  has_many :subjects, lambda{where(:is_deleted => false)}
   has_many :employees_subjects, :through =>:subjects
   has_many :exam_groups
   has_many :fee_category , :class_name => "FinanceFeeCategory"
@@ -53,10 +53,10 @@ class Batch < ActiveRecord::Base
 
   attr_accessor :job_type
 
-  named_scope :active,{ :conditions => { :is_deleted => false, :is_active => true },:joins=>:course,:select=>"`batches`.*,CONCAT(courses.code,'-',batches.name) as course_full_name",:order=>"course_full_name"}
-  named_scope :inactive,{ :conditions => { :is_deleted => false, :is_active => false },:joins=>:course,:select=>"`batches`.*,CONCAT(courses.code,'-',batches.name) as course_full_name",:order=>"course_full_name"}
-  named_scope :deleted,{:conditions => { :is_deleted => true },:joins=>:course,:select=>"`batches`.*,CONCAT(courses.code,'-',batches.name) as course_full_name",:order=>"course_full_name"}
-  named_scope :cce, {:select => "batches.*",:joins => :course,:conditions=>["courses.grading_type = #{GRADINGTYPES.invert["CCE"]}"],:order=>:code}
+  scope :active,lambda{where(:is_deleted => false, :is_active =>true).joins(:course).select("`batches`.*,CONCAT(courses.code,'-',batches.name) as course_full_name").order("course_full_name")}
+  scope :inactive,lambda{where(:is_deleted => false, :is_active => false).joins(:course).select("`batches`.*,CONCAT(courses.code,'-',batches.name) as course_full_name").order("course_full_name")}
+  scope :deleted,lambda{where(:is_deleted => true).joins(:course).select("`batches`.*,CONCAT(courses.code,'-',batches.name) as course_full_name").order("course_full_name")}
+  scope :cce, lambda{joins(:course).select("batches.*").where(["courses.grading_type = #{GRADINGTYPES.invert['CCE']}"]).order('code')}
 
   def validate
     errors.add(:start_date, "#{I18n.t('should_be_before_end_date')}.") \
@@ -83,19 +83,19 @@ class Batch < ActiveRecord::Base
   end
 
   def fee_collection_dates
-    FinanceFeeCollection.find_all_by_batch_id(self.id,:conditions => "is_deleted = false")
+    FinanceFeeCollection.where(["batch_id =? AND is_deleted=false",self.id])
   end
 
   def all_students
-    Student.find_all_by_batch_id(self.id)
+    Student.where(["by_batch_id= ?",self.id])
   end
 
   def normal_batch_subject
-    Subject.find_all_by_batch_id(self.id,:conditions=>["elective_group_id IS NULL AND is_deleted = false"])
+    Subject.where(["batch_id=? AND elective_group_id IS NULL AND is_deleted = false",self.id])
   end
   
   def elective_batch_subject(elect_group)
-    Subject.find_all_by_batch_id_and_elective_group_id(self.id,elect_group,:conditions=>["elective_group_id IS NOT NULL AND is_deleted = false"])
+    Subject.where(["batch_id =? AND elective_group_id =? AND elective_group_id IS NOT NULL AND is_deleted = false",self.id,elect_group])
   end
 
   def all_elective_subjects
@@ -103,19 +103,19 @@ class Batch < ActiveRecord::Base
   end
 
   def has_own_weekday
-    Weekday.find_all_by_batch_id(self.id,:conditions=>{:is_deleted=>false}).present?
+    Weekday.where(["batch_id = ? AND is_deleted = false",self.id]).present?
   end
 
   def allow_exam_acess(user)
     flag = true
     if user.employee? and user.role_symbols.include?(:subject_exam)
-      flag = false if user.employee_record.subjects.all(:conditions=>"batch_id = '#{self.id}'").blank?
+      flag = false if user.employee_record.subjects.where(["batch_id = '#{self.id}'"]).blank?
     end
     return flag
   end
 
   def is_a_holiday_for_batch?(day)
-    return true if Event.holidays.count(:all, :conditions => ["start_date <=? AND end_date >= ?", day, day] ) > 0
+    return true if Event.holidays.where(["start_date <=? AND end_date >= ?", day, day]).count > 0
     false
   end
 
@@ -132,7 +132,7 @@ class Batch < ActiveRecord::Base
   
   def return_holidays(start_date,end_date)
     @common_holidays ||= Event.holidays.is_common
-    @batch_holidays=self.events(:all,:conditions=>{:is_holiday=>true})
+    @batch_holidays=self.events.where({:is_holiday=>true})
     all_holiday_events = @batch_holidays+@common_holidays
     all_holiday_events.reject!{|h| !(h.start_date>=start_date and h.end_date<=end_date)}
     event_holidays = []
@@ -197,8 +197,8 @@ class Batch < ActiveRecord::Base
   end
 
   def find_batch_rank
-    @students = Student.find_all_by_batch_id(self.id)
-    @grouped_exams = GroupedExam.find_all_by_batch_id(self.id)
+    @students = Student.where(["batch_id =?",self.id])
+    @grouped_exams = GroupedExam.where(["batch_id =?",self.id])
     ordered_scores = []
     student_scores = []
     ranked_students = []
@@ -225,7 +225,7 @@ class Batch < ActiveRecord::Base
   end
 
   def find_attendance_rank(start_date,end_date)
-    @students = Student.find_all_by_batch_id(self.id)
+    @students = Student.where(["batch_id =?",self.id])
     ranked_students=[]
     unless @students.empty?
       working_days = self.find_working_days(start_date,end_date).count
@@ -233,7 +233,7 @@ class Batch < ActiveRecord::Base
         ordered_percentages = []
         student_percentages = []
         @students.each do|student|
-          leaves = Attendance.find(:all,:conditions=>["student_id = ? and month_date >= ? and month_date <= ?",student.id,start_date,end_date])
+          leaves = Attendance.where(["student_id = ? and month_date >= ? and month_date <= ?",student.id,start_date,end_date])
           absents = 0
           unless leaves.empty?
             leaves.each do|leave|
@@ -283,9 +283,9 @@ class Batch < ActiveRecord::Base
     students = self.students
     grouped_exams = self.exam_groups.reject{|e| !GroupedExam.exists?(:batch_id=>self.id, :exam_group_id=>e.id)}
     unless grouped_exams.empty?
-      subjects = self.subjects(:conditions=>{:is_deleted=>false})
+      subjects = self.subjects.where({:is_deleted=>false})
       unless students.empty?
-        st_scores = GroupedExamReport.find_all_by_student_id_and_batch_id(students,self.id)
+        st_scores = GroupedExamReport.where(["student_id =? AND batch_id =?",students,self.id])
         unless st_scores.empty?
           st_scores.map{|sc| sc.destroy}
         end
@@ -420,16 +420,16 @@ class Batch < ActiveRecord::Base
   def generate_previous_batch_reports
     grading_type = self.grading_type
     students=[]
-    batch_students= BatchStudent.find_all_by_batch_id(self.id)
+    batch_students= BatchStudent.where(["batch_id =?",self.id])
     batch_students.each do|bs|
       stu = Student.find_by_id(bs.student_id)
       students.push stu unless stu.nil?
     end
     grouped_exams = self.exam_groups.reject{|e| !GroupedExam.exists?(:batch_id=>self.id, :exam_group_id=>e.id)}
     unless grouped_exams.empty?
-      subjects = self.subjects(:conditions=>{:is_deleted=>false})
+      subjects = self.subjects.where({:is_deleted=>false})
       unless students.empty?
-        st_scores = GroupedExamReport.find_all_by_student_id_and_batch_id(students,self.id)
+        st_scores = GroupedExamReport.where(["student_id =? AND batch_id =?",students,self.id])
         unless st_scores.empty?
           st_scores.map{|sc| sc.destroy}
         end
@@ -566,9 +566,9 @@ class Batch < ActiveRecord::Base
         subject=subject.elective_group.subjects.first
       end
       #          Timetable.all(:conditions=>["('#{starting_date}' BETWEEN start_date AND end_date) OR ('#{ending_date}' BETWEEN start_date AND end_date) OR (start_date BETWEEN '#{starting_date}' AND #{ending_date}) OR (end_date BETWEEN '#{starting_date}' AND '#{ending_date}')"])
-      entries = TimetableEntry.find(:all,:joins=>:timetable,:include=>:weekday,:conditions=>["((? BETWEEN start_date AND end_date) OR (? BETWEEN start_date AND end_date) OR (start_date BETWEEN ? AND ?) OR (end_date BETWEEN ? AND ?)) AND timetable_entries.subject_id = ? AND timetable_entries.batch_id = ?",starting_date,ending_date,starting_date,ending_date,starting_date,ending_date,subject.id,id]).group_by(&:timetable_id)
+      entries = TimetableEntry.joins(:timetable).includes(:weekday).where(["((? BETWEEN start_date AND end_date) OR (? BETWEEN start_date AND end_date) OR (start_date BETWEEN ? AND ?) OR (end_date BETWEEN ? AND ?)) AND timetable_entries.subject_id = ? AND timetable_entries.batch_id = ?",starting_date,ending_date,starting_date,ending_date,starting_date,ending_date,subject.id,id]).group_by(&:timetable_id)
     else
-      entries = TimetableEntry.find(:all,:joins=>:timetable,:include=>:weekday,:conditions=>["((? BETWEEN start_date AND end_date) OR (? BETWEEN start_date AND end_date) OR (start_date BETWEEN ? AND ?) OR (end_date BETWEEN ? AND ?)) AND timetable_entries.batch_id = ?",starting_date,ending_date,starting_date,ending_date,starting_date,ending_date,id]).group_by(&:timetable_id)
+      entries = TimetableEntry.joins(:timetable).includes(:weekday).where(["((? BETWEEN start_date AND end_date) OR (? BETWEEN start_date AND end_date) OR (start_date BETWEEN ? AND ?) OR (end_date BETWEEN ? AND ?)) AND timetable_entries.batch_id = ?",starting_date,ending_date,starting_date,ending_date,starting_date,ending_date,id]).group_by(&:timetable_id)
     end
     timetable_ids=entries.keys
     hsh2=Hash.new
@@ -580,7 +580,7 @@ class Batch < ActiveRecord::Base
         hsh[k]=val.group_by(&:day_of_week)
       end
       timetables.each do |tt|
-        ([starting_date,start_date.to_date,tt.start_date].max..[tt.end_date,end_date.to_date,ending_date,Configuration.default_time_zone_present_time.to_date].min).each do |d|
+        ([starting_date,start_date.to_date,tt.start_date].max..[tt.end_date,end_date.to_date,ending_date,Config.default_time_zone_present_time.to_date].min).each do |d|
           hsh2[d]=hsh[tt.id][d.wday]
         end
       end
@@ -593,10 +593,10 @@ class Batch < ActiveRecord::Base
 
   def create_coscholastic_reports
     report_hash={}
-    observation_groups.scoped(:include=>[{:observations=>:assessment_scores},{:cce_grade_set=>:cce_grades}]).each do |og|
+    observation_groups.scoped.includes([{:observations=>:assessment_scores},{:cce_grade_set=>:cce_grades}]).each do |og|
       og.observations.each do |o|
         report_hash[o.id]={}
-        o.assessment_scores.scoped(:conditions=>{:exam_id=>nil,:batch_id=>id}).group_by(&:student_id).each{|k,v| report_hash[o.id][k]=(v.sum(&:grade_points)/v.count.to_f).round}
+        o.assessment_scores.scoped.where({:exam_id=>nil,:batch_id=>id}).group_by(&:student_id).each{|k,v| report_hash[o.id][k]=(v.sum(&:grade_points)/v.count.to_f).round}
         report_hash[o.id].each do |key,val|
           o.cce_reports.build(:student_id=>key, :grade_string=>og.cce_grade_set.grade_string_for(val), :batch_id=> id)
         end
@@ -610,15 +610,15 @@ class Batch < ActiveRecord::Base
   end
 
   def fa_groups
-    FaGroup.all(:joins=>:subjects, :conditions=>{:subjects=>{:batch_id=>id}}).uniq
+    FaGroup.joins(:subjects).where({:subjects=>{:batch_id=>id}}).uniq
   end
   
   def create_scholastic_reports
     report_hash={}
     fa_groups.each do |fg|
-      fg.fa_criterias.all(:include=>:assessment_scores).each do |f|
+      fg.fa_criterias.includes(:assessment_scores).each do |f|
         report_hash[f.id]={}
-        f.assessment_scores.scoped(:conditions=>["exam_id IS NOT NULL AND batch_id = ?",id]).group_by(&:exam_id).each do |k1,v1|
+        f.assessment_scores.scoped.where(["exam_id IS NOT NULL AND batch_id = ?",id]).group_by(&:exam_id).each do |k1,v1|
           report_hash[f.id][k1]={}
           v1.group_by(&:student_id).each{|k2,v2| report_hash[f.id][k1][k2]=(v2.sum(&:grade_points)/v2.count.to_f)}
         end
@@ -664,16 +664,16 @@ class Batch < ActiveRecord::Base
     else
       generate_cce_reports
     end
-    prev_record = Configuration.find_by_config_key("job/Batch/#{self.job_type}")
+    prev_record = Config.find_by_config_key("job/Batch/#{self.job_type}")
     if prev_record.present?
       prev_record.update_attributes(:config_value=>Time.now)
     else
-      Configuration.create(:config_key=>"job/Batch/#{self.job_type}", :config_value=>Time.now)
+      Config.create(:config_key=>"job/Batch/#{self.job_type}", :config_value=>Time.now)
     end
   end
 
   def delete_student_cce_report_cache
-    students.all(:select=>"id, batch_id").each do |s|
+    students.all.select("id, batch_id").each do |s|
       s.delete_individual_cce_report_cache
     end
   end

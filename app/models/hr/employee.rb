@@ -16,7 +16,7 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class Employee < ActiveRecord::Base
+class Employee < ApplicationRecord
   belongs_to  :employee_category
   belongs_to  :employee_position
   belongs_to  :employee_grade
@@ -36,7 +36,7 @@ class Employee < ActiveRecord::Base
   has_many    :finance_transactions, :as => :payee
   has_many    :employee_attendances
 
-  validates_format_of     :email, :with => /^[A-Z0-9._%-]+@([A-Z0-9-]+\.)+[A-Z]{2,4}$/i,   :allow_blank=>true,
+  validates_format_of     :email, :with => /\A[A-Z0-9._%-]+@([A-Z0-9-]+\.)+[A-Z]{2,4}$\z/i,   :allow_blank=>true,
     :message => "#{I18n.t('must_be_a_valid_email_address')}"
 
   validates_presence_of :employee_category_id, :employee_number, :first_name, :employee_position_id,
@@ -44,19 +44,11 @@ class Employee < ActiveRecord::Base
   validates_uniqueness_of  :employee_number
 
   validates_associated :user
+  validate :image_type
   before_validation :create_user_and_validate
   before_save :status_true
-  has_attached_file :photo,
-    :styles => {:original=> "125x125#"},
-    :url => "/system/:class/:attachment/:id/:style/:basename.:extension",
-    :path => ":rails_root/public/system/:class/:attachment/:id/:style/:basename.:extension"
 
-  VALID_IMAGE_TYPES = ['image/gif', 'image/png','image/jpeg', 'image/jpg']
-
-  validates_attachment_content_type :photo, :content_type =>VALID_IMAGE_TYPES,
-    :message=>'Image can only be GIF, PNG, JPG',:if=> Proc.new { |p| !p.photo_file_name.blank? }
-  validates_attachment_size :photo, :less_than => 512000,\
-    :message=>'must be less than 500 KB.',:if=> Proc.new { |p| p.photo_file_name_changed? }
+  has_one_attached :photo
 
   def status_true
     unless self.status==1
@@ -121,15 +113,15 @@ class Employee < ActiveRecord::Base
   alias_method(:max_hours_week, :max_hours_per_week)
   
   def next_employee
-    next_st = self.employee_department.employees.first(:conditions => "id>#{self.id}",:order => "id ASC")
-    next_st ||= employee_department.employees.first(:order => "id ASC")
-    next_st ||= self.employee_department.employees.first(:order => "id ASC")
+    next_st = self.employee_department.employees.where("id > ?",self.id).order("id ASC").first
+    next_st ||= employee_department.employees.order("id ASC").first
+    next_st ||= self.employee_department.employees.order("id ASC").first
   end
 
   def previous_employee
-    prev_st = self.employee_department.employees.first(:conditions => "id<#{self.id}",:order => "id DESC")
-    prev_st ||= employee_department.employees.first(:order => "id DESC")
-    prev_st ||= self.employee_department.empoyees.first(:order => "id DESC")
+    prev_st = self.employee_department.employees.where("id < ?",self.id).order("id DESC").first
+    prev_st ||= employee_department.employees.order("id DESC").first
+    prev_st ||= self.employee_department.empoyees.order("id DESC").first
   end
 
   def full_name
@@ -137,7 +129,7 @@ class Employee < ActiveRecord::Base
   end
 
   def is_payslip_approved(date)
-    approve = MonthlyPayslip.find_all_by_salary_date_and_employee_id(date,self.id,:conditions => ["is_approved = true"])
+    approve = MonthlyPayslip.where(["salary_date = ? AND employee_id = ? AND is_approved = true",date,self.id])
     if approve.empty?
       return false
     else
@@ -145,7 +137,7 @@ class Employee < ActiveRecord::Base
     end
   end
   def is_payslip_rejected(date)
-    approve = MonthlyPayslip.find_all_by_salary_date_and_employee_id(date,self.id,:conditions => ["is_rejected = true"])
+    approve = MonthlyPayslip.where(["salary_date = ? AND employee_id = ? AND is_rejection = true",date,self.id])
     if approve.empty?
       return false
     else
@@ -166,12 +158,8 @@ class Employee < ActiveRecord::Base
 
   def employee_salary(salary_date)
 
-    monthly_payslips = MonthlyPayslip.find(:all,
-      :order => 'salary_date desc',
-      :conditions => ["employee_id ='#{self.id}'and salary_date = '#{salary_date}' and is_approved = 1"])
-    individual_payslip_category = IndividualPayslipCategory.find(:all,
-      :order => 'salary_date desc',
-      :conditions => ["employee_id ='#{self.id}'and salary_date >= '#{salary_date}'"])
+    monthly_payslips = MonthlyPayslip.where(["employee_id = ? AND salary_date = ? AND is_approved = 1",self.id,salary_date]).order('salary_date desc')
+    individual_payslip_category = IndividualPayslipCategory.where(["employee_id = ? AND salary_date >= ?",self.id,salary_date]).order('salary_date desc')
     individual_category_non_deductionable = 0
     individual_category_deductionable = 0
     individual_payslip_category.each do |pc|
@@ -210,8 +198,7 @@ class Employee < ActiveRecord::Base
 
 
   def salary(start_date,end_date)
-    MonthlyPayslip.find_by_employee_id(self.id,:order => 'salary_date desc',
-      :conditions => ["salary_date >= '#{start_date.to_date}' and salary_date <= '#{end_date.to_date}' and is_approved = 1"]).salary_date
+    MonthlyPayslip.where(["employee_id = ? AND salary_date >= ? AND salary_date <= ? AND is_approved = 1",self.id,start_date.to_date,end_date.to_date]).order('salary_date desc').first.salary_date
 
   end
 
@@ -246,8 +233,7 @@ class Employee < ActiveRecord::Base
  
 
   def all_salaries(start_date,end_date)
-    MonthlyPayslip.find_all_by_employee_id(self.id,:select =>"distinct salary_date" ,:order => 'salary_date desc',
-      :conditions => ["salary_date >= '#{start_date.to_date}' and salary_date <= '#{end_date.to_date}' and is_approved = 1"])
+    MonthlyPayslip.select("distinct salary_date").where(["employee_id = ? AND salary_date >= ? AND salary_date <=  ? AND is_approved = 1",self.id,start_date.to_date,end_date.to_date]).order('salary_date desc')
   end
 
   def self.calculate_salary(monthly_payslip,individual_payslip_category)
@@ -285,9 +271,9 @@ class Employee < ActiveRecord::Base
   end
 
   def self.find_in_active_or_archived(id)
-    employee = Employee.find(:first,:conditions=>"id=#{id}")
+    employee = Employee.where("id= ?", id).first
     if employee.blank?
-      return  ArchivedEmployee.find(:first,:conditions=>"former_id=#{id}")
+      return  ArchivedEmployee.where("former_id= ?",id).first
     else
       return employee
     end
@@ -305,3 +291,20 @@ class Employee < ActiveRecord::Base
   end
   
 end
+  VALID_IMAGE_TYPES = ['image/gif', 'image/png','image/jpeg', 'image/jpg']
+
+  def original
+    return self.photo.variant(:resize => '125x125').processed
+  end
+
+ private
+  def image_type
+    if photo.attached? 
+      if !photo.content_type.in?(VALID_IMAGE_TYPES)
+        errors.add(:photo, " can only be a #{VALID_IMAGE_TYPES.to_sentence(:last_word_connector =>' or ')}")
+      end
+      if photo.byte_size > 512000
+        errors.add(:photo,"must be less than 500KB")
+      end
+    end
+  end

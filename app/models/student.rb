@@ -16,17 +16,16 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class Student < ActiveRecord::Base
+class Student < ApplicationRecord
 
   include CceReportMod
-    
+
   belongs_to :country
   belongs_to :batch
   belongs_to :student_category
   belongs_to :nationality, :class_name => 'Country'
   belongs_to :user
 
-  has_one    :immediate_contact
   has_one    :student_previous_data
   has_many   :student_previous_subject_mark
   has_many   :guardians, :foreign_key => 'ward_id'
@@ -44,47 +43,36 @@ class Student < ActiveRecord::Base
   has_many   :assessment_scores
   has_many   :exam_scores
   has_many   :previous_exam_scores
-  
 
-  named_scope :active, :conditions => { :is_active => true }
-  named_scope :with_full_name_only, :select=>"id, CONCAT_WS('',first_name,' ',last_name) AS name,first_name,last_name", :order=>:first_name
-  named_scope :with_name_admission_no_only, :select=>"id, CONCAT_WS('',first_name,' ',last_name,' - ',admission_no) AS name,first_name,last_name,admission_no", :order=>:first_name
+  scope :active, lambda{where(:is_active=> true)}
+  scope :with_full_name_only,lambda{select("id, CONCAT_WS('',first_name,' ',last_name) AS name,first_name,last_name").order(:first_name)}
+  scope :with_name_admission_no_only, lambda{select("id, CONCAT_WS('',first_name,' ',last_name,' - ',admission_no) AS name,first_name,last_name,admission_no").order(:first_name)}
 
-  named_scope :by_first_name, :order=>'first_name',:conditions => { :is_active => true }
+  scope :by_first_name, lambda{where(:is_active =>true).order('first_name')}
 
   validates_presence_of :admission_no, :admission_date, :first_name, :batch_id, :date_of_birth
   validates_uniqueness_of :admission_no
   validates_presence_of :gender
-  validates_format_of     :email, :with => /^[A-Z0-9._%-]+@([A-Z0-9-]+\.)+[A-Z]{2,4}$/i,   :allow_blank=>true,
+  validates_format_of     :email, :with => /\A([A-Z0-9._%-]+@([A-Z0-9-]+\.)+[A-Z]{2,4})\z/i,   :allow_blank=>true,
     :message => "#{I18n.t('must_be_a_valid_email_address')}"
-  validates_format_of     :admission_no, :with => /^[A-Z0-9_-]*$/i,
+  validates_format_of     :admission_no, :with => /\A[A-Z0-9_-]*\z/i,
     :message => "#{I18n.t('must_contain_only_letters')}"
 
   validates_associated :user
+  validate :image_type
   before_validation :create_user_and_validate
 
   before_save :is_active_true
 
-  has_attached_file :photo,
-    :styles => {:original=> "125x125#"},
-    :url => "/system/:class/:attachment/:id/:style/:basename.:extension",
-    :path => ":rails_root/public/system/:class/:attachment/:id/:style/:basename.:extension"
 
-  VALID_IMAGE_TYPES = ['image/gif', 'image/png','image/jpeg', 'image/jpg']
+  has_one_attached :photo
 
-  validates_attachment_content_type :photo, :content_type =>VALID_IMAGE_TYPES,
-    :message=>'Image can only be GIF, PNG, JPG',:if=> Proc.new { |p| !p.photo_file_name.blank? }
-  validates_attachment_size :photo, :less_than => 512000,\
-    :message=>'must be less than 500 KB.',:if=> Proc.new { |p| p.photo_file_name_changed? }
-  
+
   def validate
-    errors.add(:date_of_birth, "#{I18n.t('cant_be_a_future_date')}.") if self.date_of_birth >= Date.today \
-      unless self.date_of_birth.nil?
-    errors.add(:gender, "#{I18n.t('model_errors.student.error2')}.") unless ['m', 'f'].include? self.gender.downcase \
-      unless self.gender.nil?
+    errors.add(:date_of_birth, "#{I18n.t('cant_be_a_future_date')}.") if self.date_of_birth >= Date.today unless self.date_of_birth.nil?
+    errors.add(:gender, "#{I18n.t('model_errors.student.error2')}.") unless ['m', 'f'].include? self.gender.downcase unless self.gender.nil?
     errors.add(:admission_no, "#{I18n.t('model_errors.student.error3')}.") if self.admission_no=='0'
     errors.add(:admission_no, "#{I18n.t('should_not_be_admin')}") if self.admission_no.to_s.downcase== 'admin'
-    
   end
 
   def is_active_true
@@ -119,7 +107,7 @@ class Student < ActiveRecord::Base
       if check_changes.include?('immediate_contact_id') or check_changes.include?('admission_no')
         Guardian.shift_user(self)
       end
-      
+
     end
     self.email = "" if self.email.blank?
     return false unless errors.blank?
@@ -166,29 +154,29 @@ class Student < ActiveRecord::Base
   end
 
   def next_student
-    next_st = self.batch.students.first(:conditions => "id > #{self.id}", :order => "id ASC")
-    next_st ||= batch.students.first(:order => "id ASC")
+    next_st = self.batch.students.where("id > #{self.id}").order("id ASC").first
+    next_st ||= batch.students.order("id ASC").first
   end
 
   def previous_student
-    prev_st = self.batch.students.first(:conditions => "id < #{self.id}", :order => "admission_no DESC")
-    prev_st ||= batch.students.first(:order => "id DESC")
-    prev_st ||= self.batch.students.first(:order => "id DESC")
+    prev_st = self.batch.students.where("id < #{self.id}").order("admission_no DESC").first
+    prev_st ||= batch.students.order("id DESC").first
+    prev_st ||= self.batch.students.order("id DESC").first
   end
 
   def previous_fee_student(date)
-    fee = FinanceFee.first(:conditions => "student_id < #{self.id} and fee_collection_id = #{date}", :joins=>'INNER JOIN students ON finance_fees.student_id = students.id',:order => "student_id DESC")
+    fee = FinanceFee.joins("INNER JOIN students on finance_fees.student_id = students.id AND student_id < #{self.id} and fee_collection_id = #{date}").order("student_id DESC").first
     prev_st = fee.student unless fee.blank?
-    fee ||= FinanceFee.first(:conditions=>"fee_collection_id = #{date}", :joins=>'INNER JOIN students ON finance_fees.student_id = students.id',:order => "student_id DESC")
+    fee ||= FinanceFee.joins("INNER JOIN students on finance_fees.student_id = students.id AND fee_collection_id =#{date}").order('student_id DESC').first
     prev_st ||= fee.student unless fee.blank?
     #    prev_st ||= self.batch.students.first(:order => "id DESC")
   end
 
   def next_fee_student(date)
-
-    fee = FinanceFee.first(:conditions => "student_id > #{self.id} and fee_collection_id = #{date}", :joins=>'INNER JOIN students ON finance_fees.student_id = students.id', :order => "student_id ASC")
+    fee = FinanceFee.joins("INNER JOIN students on finance_fees.student_id = students.id AND student_id < #{self.id} and fee_collection_id = #{date}").order("student_id DESC").first
     next_st = fee.student unless fee.nil?
-    fee ||= FinanceFee.first(:conditions=>"fee_collection_id = #{date}", :joins=>'INNER JOIN students ON finance_fees.student_id = students.id',:order => "student_id ASC")
+    fee ||= FinanceFee.joins("INNER JOIN students on finance_fees.student_id = students.id AND fee_collection_id =#{date}").order('student_id DESC').first
+
     next_st ||= fee.student unless fee.nil?
     #    prev_st ||= self.batch.students.first(:order => "id DESC")
   end
@@ -201,9 +189,9 @@ class Student < ActiveRecord::Base
     particulars = date.fees_particulars(self)
     total_fees=0
     financefee = date.fee_transactions(self.id)
-    batch_discounts = BatchFeeCollectionDiscount.find_all_by_finance_fee_collection_id(date.id)
-    student_discounts = StudentFeeCollectionDiscount.find_all_by_finance_fee_collection_id_and_receiver_id(date.id,self.id)
-    category_discounts = StudentCategoryFeeCollectionDiscount.find_all_by_finance_fee_collection_id_and_receiver_id(date.id,self.student_category_id)
+    batch_discounts = BatchFeeCollectionDiscount.all.find_by_finance_fee_collection_id(date.id)
+    student_discounts = StudentFeeCollectionDiscount.all.find_by_finance_fee_collection_id_and_receiver_id(date.id,self.id)
+    category_discounts = StudentCategoryFeeCollectionDiscount.all.find_by_finance_fee_collection_id_and_receiver_id(date.id,self.student_category_id)
     total_discount = 0
     total_discount += batch_discounts.map{|s| s.discount}.sum unless batch_discounts.nil?
     total_discount += student_discounts.map{|s| s.discount}.sum unless student_discounts.nil?
@@ -213,7 +201,7 @@ class Student < ActiveRecord::Base
     end
     particulars.map { |s|  total_fees += s.amount.to_f}
     total_fees -= total_fees*(total_discount/100)
-    paid_fees_transactions = FinanceTransaction.find(:all,:select=>'amount,fine_amount',:conditions=>"FIND_IN_SET(id,\"#{financefee.transaction_id}\")") unless financefee.nil?
+    paid_fees_transactions = FinanceTransaction.all.where("FIND_IN_SET(id,\"#{financefee.transaction_id}\")").select('amount,fine_amount') unless financefee.nil?
     paid_fees = 0
     paid_fees_transactions.map { |m| paid_fees += (m.amount.to_f - m.fine_amount.to_f) } unless paid_fees_transactions.nil?
     amount_pending = total_fees.to_f - paid_fees.to_f
@@ -236,7 +224,7 @@ class Student < ActiveRecord::Base
     if retaken_exams.empty?
       return false
     else
-      exams = Exam.find_all_by_id(retaken_exams.collect(&:exam_id))
+      exams = Exam.all.find_by_id(retaken_exams.collect(&:exam_id))
       if exams.collect(&:subject_id).include?(subject_id)
         return true
       end
@@ -246,13 +234,13 @@ class Student < ActiveRecord::Base
   end
 
   def check_fee_pay(date)
-    date.finance_fees.first(:conditions=>"student_id = #{self.id}").is_paid
+    date.finance_fees.where("student_id = #{self.id}").first.is_paid
   end
 
   def self.next_admission_no
     '' #stub for logic to be added later.
   end
-  
+
   def get_fee_strucure_elements(date)
     elements = FinanceFeeStructureElement.get_student_fee_components(self,date)
     elements[:all] + elements[:by_batch] + elements[:by_category] + elements[:by_batch_and_category]
@@ -268,8 +256,8 @@ class Student < ActiveRecord::Base
 
   def has_associated_fee_particular?(fee_category)
     status = false
-    status = true if fee_category.fee_particulars.find_all_by_admission_no(admission_no).count > 0
-    status = true if student_category_id.present? and fee_category.fee_particulars.find_all_by_student_category_id(student_category_id).count > 0
+    status = true if fee_category.fee_particulars.where(:admission_no => admission_no).count > 0
+    status = true if student_category_id.present? and fee_category.fee_particulars.where(:student_category_id =>student_category_id).count > 0
     return status
   end
 
@@ -301,9 +289,9 @@ class Student < ActiveRecord::Base
       #      end
       #
     end
- 
+
   end
-  
+
   def check_dependency
     return true if self.finance_transactions.present? or self.graduated_batches.present? or self.attendances.present? or self.finance_fees.present?
     return true if FedenaPlugin.check_dependency(self,"permanant").present?
@@ -315,17 +303,16 @@ class Student < ActiveRecord::Base
   end
 
   def assessment_score_for(indicator_id,exam_id,batch_id)
-    assessment_score = self.assessment_scores.find(:first, :conditions => { :student_id => self.id,:descriptive_indicator_id=>indicator_id,:exam_id=>exam_id,:batch_id=>batch_id })
-    assessment_score.nil? ? assessment_scores.build(:descriptive_indicator_id=>indicator_id,:exam_id=>exam_id,:batch_id=>batch_id) : assessment_score
+    assessment_score = self.assessment_scores.where({ :student_id => self.id,:descriptive_indicator_id=>indicator_id,:exam_id=>exam_id,:batch_id=>batch_id }).first
   end
   def observation_score_for(indicator_id,batch_id)
-    assessment_score = self.assessment_scores.find(:first, :conditions => { :student_id => self.id,:descriptive_indicator_id=>indicator_id,:batch_id=>batch_id })
+    assessment_score = self.assessment_scores.where({ :student_id => self.id,:descriptive_indicator_id=>indicator_id,:batch_id=>batch_id }).first
     assessment_score.nil? ? assessment_scores.build(:descriptive_indicator_id=>indicator_id,:batch_id=>batch_id) : assessment_score
   end
 
   def has_higher_priority_ranking_level(ranking_level_id,type,subject_id)
     ranking_level = RankingLevel.find(ranking_level_id)
-    higher_levels = RankingLevel.find(:all,:conditions=>["course_id = ? AND priority < ?", ranking_level.course_id,ranking_level.priority])
+    higher_levels = RankingLevel.where(["course_id = ? AND priority < ?", ranking_level.course_id,ranking_level.priority])
     if higher_levels.empty?
       return false
     else
@@ -343,9 +330,9 @@ class Student < ActiveRecord::Base
           unless level.subject_count.nil?
             unless level.full_course==true
               subjects = self.batch.subjects
-              scores = GroupedExamReport.find(:all,:conditions=>{:student_id=>self.id,:batch_id=>self.batch.id,:subject_id=>subjects.collect(&:id),:score_type=>"s"})
+              scores = GroupedExamReport.where({:student_id=>self.id,:batch_id=>self.batch.id,:subject_id=>subjects.collect(&:id),:score_type=>"s"})
             else
-              scores = GroupedExamReport.find(:all,:conditions=>{:student_id=>self.id,:score_type=>"s"})
+              scores = GroupedExamReport.where({:student_id=>self.id,:score_type=>"s"})
             end
             unless scores.empty?
               if self.batch.gpa_enabled?
@@ -366,11 +353,11 @@ class Student < ActiveRecord::Base
             end
           else
             unless level.full_course==true
-              score = GroupedExamReport.find_by_student_id(self.id,:conditions=>{:batch_id=>self.batch.id,:score_type=>"c"})
+              score = GroupedExamReport.find_by_student_id_and_batch_id_and_score_type(self.id,self.batch.id,"c")
             else
               total_student_score = 0
               avg_student_score = 0
-              marks = GroupedExamReport.find_all_by_student_id_and_score_type(self.id,"c")
+              marks = GroupedExamReport.where(["student_id =? AND score_type =?",self.id,"c"])
               unless marks.empty?
                 marks.map{|m| total_student_score+=m.marks}
                 avg_student_score = total_student_score.to_f/marks.count.to_f
@@ -388,7 +375,7 @@ class Student < ActiveRecord::Base
           end
         elsif type=="course"
           unless level.subject_count.nil?
-            scores = GroupedExamReport.find(:all,:conditions=>{:student_id=>self.id,:score_type=>"s"})
+            scores = GroupedExamReport.where({:student_id=>self.id,:score_type=>"s"})
             unless scores.empty?
               if level.marks_limit_type=="upper"
                 scores.reject!{|s| !(((s.marks < level.gpa unless level.gpa.nil?) if s.student.batch.gpa_enabled?) or (s.marks < level.marks unless level.marks.nil?))}
@@ -427,7 +414,7 @@ class Student < ActiveRecord::Base
             end
           else
             unless level.full_course==true
-              scores = GroupedExamReport.find(:all,:conditions=>{:student_id=>self.id,:score_type=>"c"})
+              scores = GroupedExamReport.where({:student_id=>self.id,:score_type=>"c"})
               unless scores.empty?
                 if level.marks_limit_type=="upper"
                   scores.reject!{|s| !(((s.marks < level.gpa unless level.gpa.nil?) if s.student.batch.gpa_enabled?) or (s.marks < level.marks unless level.marks.nil?))}
@@ -441,7 +428,7 @@ class Student < ActiveRecord::Base
             else
               total_student_score = 0
               avg_student_score = 0
-              marks = GroupedExamReport.find_all_by_student_id_and_score_type(self.id,"c")
+              marks = GroupedExamReport.where(["student_id =? AND score_type =?",self.id,"c"])
               unless marks.empty?
                 marks.map{|m| total_student_score+=m.marks}
                 avg_student_score = total_student_score.to_f/marks.count.to_f
@@ -461,5 +448,21 @@ class Student < ActiveRecord::Base
     return false
   end
 
-  
+  VALID_IMAGE_TYPES = ['image/gif', 'image/png','image/jpeg', 'image/jpg']
+
+  def original(input)
+    return self.photo.variant(:resize => '125x125').processed
+  end
+
+  private
+  def image_type
+    if photo.attached? 
+      if !photo.content_type.in?(VALID_IMAGE_TYPES)
+        errors.add(:photo, " can only be a #{VALID_IMAGE_TYPES.to_sentence(:last_word_connector =>' or ')}")
+      end
+      if photo.byte_size > 512000
+        errors.add(:photo,"must be less than 500KB")
+      end
+    end
+  end
 end

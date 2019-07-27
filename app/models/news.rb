@@ -16,7 +16,7 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class News < ActiveRecord::Base
+class News < ApplicationRecord
   belongs_to :author, :class_name => 'User'
   has_many :comments, :class_name => 'NewsComment'
   after_save :reload_news_bar
@@ -35,7 +35,8 @@ class News < ActiveRecord::Base
   end
 
   def reload_news_bar
-    ActionController::Base.new.expire_fragment(News.cache_fragment_name)
+    #TODO may be should be moved to news_controller ActionController::Base.new.expire_fragment(News.cache_fragment_name)
+    ApplicationController.new.expire_fragment(News.cache_fragment_name)
   end
 
   def self.cache_fragment_name

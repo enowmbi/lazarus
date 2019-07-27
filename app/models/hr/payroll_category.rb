@@ -16,10 +16,10 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class PayrollCategory < ActiveRecord::Base
+class PayrollCategory < ApplicationRecord
   validates_uniqueness_of :name
   validates_presence_of   :name
 
-  has_many :monthly_paslips
+  has_many :monthly_payslips
 
 end

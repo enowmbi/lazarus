@@ -15,20 +15,7 @@
 #WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #See the License for the specific language governing permissions and
 #limitations under the License.
-
-class FedenaMailer < ActionMailer::Base
-  def email(sender,recipients, subject, message)
-    recipient_emails = (recipients.class == String) ? recipients.gsub(' ','').split(',').compact : recipients.compact
-    setup_email(sender, recipient_emails, subject, message)
-  end
-
-  protected
-  def setup_email(sender, emails, subject, message)
-    @from = sender
-    @recipients = emails
-    @subject = subject
-    @sent_on = Time.now
-    @body['message'] = message
-  end
-  
+class School < ApplicationRecord
+  has_many :batch_students
+ validates_presence_of :name
 end

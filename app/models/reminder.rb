@@ -16,7 +16,7 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class Reminder < ActiveRecord::Base
+class Reminder < ApplicationRecord
   validates_presence_of :body
   belongs_to :user , :foreign_key => 'sender'
   belongs_to :to_user, :class_name=>"User",:foreign_key => 'recipient'

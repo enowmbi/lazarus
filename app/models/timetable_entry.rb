@@ -16,7 +16,7 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class TimetableEntry < ActiveRecord::Base
+class TimetableEntry < ApplicationRecord
   belongs_to :timetable
   belongs_to :batch
   belongs_to :class_timing

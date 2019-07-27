@@ -16,11 +16,11 @@
 #WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #See the License for the specific language governing permissions and
 #limitations under the License.
-class DescriptiveIndicator < ActiveRecord::Base
+class DescriptiveIndicator < ApplicationRecord
   belongs_to    :describable,:polymorphic=>true
   has_many      :assessment_scores
   validates_presence_of :name
   validates_presence_of :desc
 
-  default_scope :order=>'sort_order ASC'
+ default_scope lambda{order('sort_order ASC')}
 end

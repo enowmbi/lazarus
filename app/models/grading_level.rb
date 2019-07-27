@@ -16,7 +16,7 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class GradingLevel < ActiveRecord::Base
+class GradingLevel < ApplicationRecord
   belongs_to :batch
 
   validates_presence_of :name, :min_score
@@ -40,7 +40,7 @@ class GradingLevel < ActiveRecord::Base
   end
 
  def self.exists_for_batch?(batch_id)
-    batch_grades = GradingLevel.find_all_by_batch_id(batch_id, :conditions=> 'is_deleted = false')
+   batch_grades = GradingLevel.where(["batch_id = ? AND is_deleted=false",batch_id])
     default_grade = GradingLevel.default
     if batch_grades.blank? and default_grade.blank?
       return false
@@ -53,11 +53,9 @@ class GradingLevel < ActiveRecord::Base
     def percentage_to_grade(percent_score, batch_id)
       batch_grades = GradingLevel.for_batch(batch_id)
       if batch_grades.empty?
-        grade = GradingLevel.default.find :first,
-          :conditions => [ "min_score <= ?", percent_score.round ], :order => 'min_score desc'
+        grade = GradingLevel.default.where([ "min_score <= ?", percent_score.round ]).order('min_score desc').first
       else
-        grade = GradingLevel.for_batch(batch_id).find :first,
-          :conditions => [ "min_score <= ?", percent_score.round ], :order => 'min_score desc'
+        grade = GradingLevel.for_batch(batch_id).where([ "min_score <= ?", percent_score.round ]).order('min_score desc')
       end
       grade
     end

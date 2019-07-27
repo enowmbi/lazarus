@@ -16,7 +16,7 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class Subject < ActiveRecord::Base
+class Subject < ApplicationRecord
 
   belongs_to :batch
   belongs_to :elective_group
@@ -27,14 +27,16 @@ class Subject < ActiveRecord::Base
   has_many :students, :through => :students_subjects
   has_many :grouped_exam_reports
   has_and_belongs_to_many_with_deferred_save :fa_groups
+
   validates_presence_of :name, :max_weekly_classes, :code,:batch_id
   validates_presence_of :credit_hours, :if=>:check_grade_type
   validates_numericality_of :max_weekly_classes
   validates_numericality_of :amount,:allow_nil => true
-  validates_uniqueness_of :code, :case_sensitive => false, :scope=>[:batch_id,:is_deleted] ,:if=> 'is_deleted == false'
-  named_scope :for_batch, lambda { |b| { :conditions => { :batch_id => b.to_i, :is_deleted => false } } }
-  named_scope :without_exams, :conditions => { :no_exams => false, :is_deleted => false }
-  named_scope :active, :conditions => { :is_deleted => false }
+  validates_uniqueness_of :code, :case_sensitive => false, :scope=>[:batch_id,:is_deleted] ,:if=> lambda{|r| r.is_deleted == false}
+
+  scope :for_batch, lambda {|b| where({ :batch_id => b.to_i, :is_deleted => false }) }
+  scope :without_exams, lambda{where({ :no_exams => false, :is_deleted => false })}
+  scope :active, lambda{where({:is_deleted => false })}
 
   before_save :fa_group_valid
 
@@ -53,7 +55,7 @@ class Subject < ActiveRecord::Base
   end
 
   def lower_day_grade
-    subjects = Subject.find_all_by_elective_group_id(self.elective_group_id) unless self.elective_group_id.nil?
+    subjects = Subject.where(:elective_group_id => self.elective_group_id) unless self.elective_group_id.nil?
     selected_employee = nil
     subjects.each do |subject|
       employees = subject.employees
@@ -69,7 +71,7 @@ class Subject < ActiveRecord::Base
   end
 
   def lower_week_grade
-    subjects = Subject.find_all_by_elective_group_id(self.elective_group_id) unless self.elective_group_id.nil?
+    subjects = Subject.where(:elective_group_id => self.elective_group_id) unless self.elective_group_id.nil?
     selected_employee = nil
     subjects.each do |subject|
       employees = subject.employees
@@ -85,12 +87,12 @@ class Subject < ActiveRecord::Base
   end
 
   def no_exam_for_batch(batch_id)
-    grouped_exams = GroupedExam.find_all_by_batch_id(batch_id).collect(&:exam_group_id)
+    grouped_exams = GroupedExam.where(:batch_id => batch_id).collect(&:exam_group_id)
     return exam_not_created(grouped_exams)
   end
 
   def exam_not_created(exam_group_ids)
-    exams = Exam.find_all_by_exam_group_id_and_subject_id(exam_group_ids,self.id)
+    exams = Exam.where(["exam_group_id = ? AND subject_id =?",exam_group_ids,self.id])
     if exams.empty?
       return true
     else

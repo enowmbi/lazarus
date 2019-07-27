@@ -15,7 +15,7 @@
 #WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #See the License for the specific language governing permissions and
 #limitations under the License.
-class BatchGroup < ActiveRecord::Base
+class BatchGroup < ApplicationRecord
   belongs_to :course
   has_many :grouped_batches, :dependent=>:destroy
   has_many :batches, :through=>:grouped_batches

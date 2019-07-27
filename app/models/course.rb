@@ -16,7 +16,7 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class Course < ActiveRecord::Base
+class Course < ApplicationRecord
 
   GRADINGTYPES = {"1"=>"GPA","2"=>"CWA","3"=>"CCE"}
   
@@ -34,9 +34,9 @@ class Course < ActiveRecord::Base
   
   before_save :cce_weightage_valid
 
-  named_scope :active, :conditions => { :is_deleted => false }, :order => 'course_name asc'
-  named_scope :deleted, :conditions => { :is_deleted => true }, :order => 'course_name asc'
-  named_scope :cce, {:select => "courses.*",:conditions=>{:grading_type => GRADINGTYPES.invert["CCE"]}, :order => 'course_name asc'}
+  scope :active, lambda{where({:is_deleted => false }).order('course_name asc')}
+  scope :deleted,lambda{where({:is_deleted => true }).order('course_name asc')}
+  scope :cce, lambda{select("courses.*").where({:grading_type => GRADINGTYPES.invert["CCE"]}).order('course_name asc')}
 
   def presence_of_initial_batch
     errors.add_to_base "#{I18n.t('should_have_an_initial_batch')}" if batches.length == 0
@@ -51,7 +51,7 @@ class Course < ActiveRecord::Base
   end
 
   def active_batches
-    self.batches.all(:conditions=>{:is_active=>true,:is_deleted=>false})
+    self.batches.all.where({:is_active=>true,:is_deleted=>false})
   end
 
   def has_batch_groups_with_active_batches
@@ -67,9 +67,9 @@ class Course < ActiveRecord::Base
   end
 
   def find_course_rank(batch_ids,sort_order)
-    batches = Batch.find_all_by_id(batch_ids)
-    @students = Student.find_all_by_batch_id(batches)
-    @grouped_exams = GroupedExam.find_all_by_batch_id(batches)
+    batches = Batch.where(:id =>batch_ids)
+    @students = Student.where(["batch_id =?",batches])
+    @grouped_exams = GroupedExam.where(["batch_id =?",batches])
     ordered_scores = []
     student_scores = []
     ranked_students = []
@@ -139,7 +139,7 @@ class Course < ActiveRecord::Base
     def grading_types
       hsh =  ActiveSupport::OrderedHash.new
       hsh["0"]="Normal"
-      types = Configuration.get_grading_types
+      types = Config.get_grading_types
       types.each{|t| hsh[t] = GRADINGTYPES[t]}
       hsh
     end
@@ -149,7 +149,7 @@ class Course < ActiveRecord::Base
   end
 
   def cce_weightages_for_exam_category(cce_exam_cateogry_id)
-    cce_weightages.all(:conditions=>{:cce_exam_category_id=>cce_exam_cateogry_id})
+    cce_weightages.where({:cce_exam_category_id=>cce_exam_cateogry_id})
   end
 
   private

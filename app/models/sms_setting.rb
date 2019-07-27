@@ -16,7 +16,7 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class SmsSetting < ActiveRecord::Base
+class SmsSetting < ApplicationRecord
 
   def application_sms_active
     application_sms = SmsSetting.find_by_settings_key("ApplicationEnabled")
@@ -65,7 +65,7 @@ class SmsSetting < ActiveRecord::Base
     return config
   end
 
-   def self.application_sms_status
+  def self.application_sms_status
     application_sms = SmsSetting.find_by_settings_key("ApplicationEnabled")
     return true if application_sms and application_sms.is_enabled
   end

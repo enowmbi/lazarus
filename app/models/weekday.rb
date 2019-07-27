@@ -16,16 +16,16 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class Weekday < ActiveRecord::Base
+class Weekday < ApplicationRecord
   belongs_to :batch
   has_many :timetable_entries , :dependent=>:destroy
-  default_scope :order => 'weekday asc'
-  named_scope   :default, :conditions => { :batch_id => nil,:is_deleted=>false}
-  named_scope   :for_batch, lambda { |b| { :conditions => { :batch_id => b.to_i,:is_deleted=>false } } }
+  default_scope lambda{order('weekday asc')}
+  scope   :default, lambda{where({ :batch_id => nil,:is_deleted=>false})}
+  scope   :for_batch, lambda { |b| where({ :batch_id => b.to_i,:is_deleted=>false }) }
 
   def self.weekday_by_day(batch_id)
     days={}
-    weekdays = Weekday.find_all_by_batch_id(batch_id)
+    weekdays = Weekday.where(["batch_id=?",batch_id])
     if weekdays.empty?
       weekdays = Weekday.default
     end

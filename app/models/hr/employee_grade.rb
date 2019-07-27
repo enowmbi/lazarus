@@ -16,13 +16,13 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class EmployeeGrade < ActiveRecord::Base
+class EmployeeGrade < ApplicationRecord
   validates_presence_of :name
   validates_uniqueness_of :name, :priority
   validates_numericality_of :priority
 
   has_many :employee
-  named_scope :active, :conditions => {:status => true }
+  scope :active, lambda{where({:status => true })}
 
   def validate
     self.errors.add(:max_hours_week, "#{I18n.t('should_be_greater_than_max_period')}.") \

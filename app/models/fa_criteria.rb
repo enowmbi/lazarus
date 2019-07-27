@@ -15,15 +15,15 @@
 #WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #See the License for the specific language governing permissions and
 #limitations under the License.
-class FaCriteria < ActiveRecord::Base
+class FaCriteria < ApplicationRecord
   has_many    :descriptive_indicators,  :as=>:describable
   has_many    :assessment_scores, :through=>:descriptive_indicators
   accepts_nested_attributes_for :descriptive_indicators
   has_many :cce_reports , :as=>:observable
   belongs_to :fa_group
 
-  default_scope :order=>'sort_order ASC'
-  named_scope :active,:conditions=>{:is_deleted=>false}
+  default_scope lambda{order('sort_order ASC')}
+  scope :active,lambda{where({:is_deleted=>false})}
 
   validates_presence_of :fa_group_id
   def validate

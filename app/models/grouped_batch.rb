@@ -15,7 +15,7 @@
 #WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #See the License for the specific language governing permissions and
 #limitations under the License.
-class GroupedBatch < ActiveRecord::Base
+class GroupedBatch < ApplicationRecord
   belongs_to :batch_group
   belongs_to :batch
 

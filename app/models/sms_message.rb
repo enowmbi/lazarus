@@ -15,14 +15,14 @@
 #WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #See the License for the specific language governing permissions and
 #limitations under the License.
-class SmsMessage < ActiveRecord::Base
+class SmsMessage < ApplicationRecord
   has_many :sms_logs
 
   def self.get_sms_messages(page = 1)
-    SmsMessage.paginate(:order=>"id DESC", :page => page, :per_page => 30)
+    SmsMessage.order("id DESC").paginate(:page => page, :per_page => 30)
   end
 
   def get_sms_logs(page = 1)
-    self.sms_logs.paginate( :order=>"id DESC", :page => page, :per_page => 30)
+    self.sms_logs.order("id DESC").paginate(:page => page, :per_page => 30)
   end
 end

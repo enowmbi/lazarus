@@ -16,7 +16,7 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class BatchEvent < ActiveRecord::Base
+class BatchEvent < ApplicationRecord
   belongs_to :batch
   belongs_to :event
 end

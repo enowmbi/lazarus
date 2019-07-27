@@ -16,7 +16,7 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class Config < ActiveRecord::Base
+class Config < ApplicationRecord
 
 STUDENT_ATTENDANCE_TYPE_OPTIONS = [["#{I18n.t('daily_text')}", "Daily"], ["#{I18n.t('subject_wise_text')}", "SubjectWise"]]
 
@@ -66,7 +66,7 @@ NETWORK_STATES                   = [["#{I18n.t('online')}",'Online'],["#{I18n.t(
     def set_value(key, value)
       config = find_by(:config_key => key)
       config.nil? ?
-        Configuration.create(:config_key => key, :config_value => value) :
+        Config.create(:config_key => key, :config_value => value) :
         config.update_attribute(:config_value, value)
     end
 
@@ -78,7 +78,7 @@ NETWORK_STATES                   = [["#{I18n.t('online')}",'Online'],["#{I18n.t(
 
     def get_grading_types
       grading_types = Course::GRADINGTYPES
-      types= all(:conditions=>{:config_key=>grading_types.values, :config_value=>"1"},:group=>:config_key)
+      types= all.where({:config_key=>grading_types.values, :config_value=>"1"}).group(:config_key)
       grading_types.keys.select{|k| types.collect(&:config_key).include? grading_types[k]}      
     end
 

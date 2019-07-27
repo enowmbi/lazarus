@@ -15,6 +15,6 @@
 #WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #See the License for the specific language governing permissions and
 #limitations under the License.
-class Language < ActiveRecord::Base
- named_scope :translation_available, :conditions => { :code => Configuration::LOCALES }
+class Language < ApplicationRecord
+ scope :translation_available, lambda{where(:code => Config::LOCALES )}
 end

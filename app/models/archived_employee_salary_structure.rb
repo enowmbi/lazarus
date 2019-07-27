@@ -16,6 +16,6 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class ArchivedEmployeeSalaryStructure < ActiveRecord::Base
+class ArchivedEmployeeSalaryStructure < ApplicationRecord
    has_many :payroll_categories
 end

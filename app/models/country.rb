@@ -16,6 +16,6 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class Country < ActiveRecord::Base
-  default_scope :order=>'name ASC'
+class Country < ApplicationRecord
+  default_scope lambda{order('name ASC')}
 end

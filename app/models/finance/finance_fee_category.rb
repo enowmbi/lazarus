@@ -16,7 +16,7 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class FinanceFeeCategory < ActiveRecord::Base
+class FinanceFeeCategory < ApplicationRecord
   belongs_to :batch
   belongs_to :student
 #
@@ -30,21 +30,20 @@ class FinanceFeeCategory < ActiveRecord::Base
 
   validates_presence_of :name
   validates_presence_of :batch_id,:message=>"#{I18n.t('not_specified')}"
-  validates_uniqueness_of :name, :scope=>[:batch_id, :is_deleted],:if=> 'is_deleted == false'
+  validates_uniqueness_of :name, :scope=>[:batch_id, :is_deleted],:if=> lambda{|r| r.is_deleted == false}
 
   def fees(student)
-    FinanceFeeParticular.find_all_by_finance_fee_category_id(self.id,
-      :conditions => ["((student_category_id IS NULL AND admission_no IS NULL )OR(student_category_id = '#{student.student_category_id}'AND admission_no IS NULL) OR (student_category_id IS NULL AND admission_no = '#{student.admission_no}')) and is_deleted=0"])
+    FinanceFeeParticular.where(["finance_fee_category_id =?",self.id]).where(["((student_category_id IS NULL AND admission_no IS NULL )OR(student_category_id = '#{student.student_category_id}'AND admission_no IS NULL) OR (student_category_id IS NULL AND admission_no = '#{student.admission_no}')) and is_deleted=0"])
   end
 
   def check_fee_collection
-    fee_collection = FinanceFeeCollection.find_all_by_fee_category_id(self.id,:conditions=>{:is_deleted=>0})
+    fee_collection = FinanceFeeCollection.where(["fee_category_id =? AND is_deleted = 0 ",self.id])
     fee_collection.empty? ? true : false
   end
 
   def check_fee_collection_for_additional_fees
     flag =0
-    fee_collection = FinanceFeeCollection.find_all_by_fee_category_id(self.id)
+    fee_collection = FinanceFeeCollection.where("fee_category_id = ?",self.id)
     fee_collection.each do |fee|
       flag = 1 if fee.check_fee_category == true
     end
@@ -59,15 +58,14 @@ class FinanceFeeCategory < ActiveRecord::Base
   end
 
   def student_fee_balance(student,date)
-    particulars= FinanceFeeParticular.find_all_by_finance_fee_category_id(self.id,
-      :conditions => ["((student_category_id IS NULL AND admission_no IS NULL )OR(student_category_id = '#{student.student_category_id}'AND admission_no IS NULL) OR (student_category_id IS NULL AND admission_no = '#{student.admission_no}')) and is_deleted=0"])
+    particulars= FinanceFeeParticular.where(["finance_fee_category_id = ?",self.id]).where(["((student_category_id IS NULL AND admission_no IS NULL )OR(student_category_id = '#{student.student_category_id}'AND admission_no IS NULL) OR (student_category_id IS NULL AND admission_no = '#{student.admission_no}')) and is_deleted=0"])
     financefee = student.finance_fee_by_date(date)
 
-    paid_fees = FinanceTransaction.find(:all,:conditions=>"FIND_IN_SET(id,\"#{financefee.transaction_id}\")") unless financefee.transaction_id.blank?
+    paid_fees = FinanceTransaction.where(["FIND_IN_SET(id,\"#{financefee.transaction_id}\")"]) unless financefee.transaction_id.blank?
 
-    batch_discounts = BatchFeeDiscount.find_all_by_finance_fee_category_id(self.id)
-    student_discounts = StudentFeeDiscount.find_all_by_finance_fee_category_id_and_receiver_id(self.id,student.id)
-    category_discounts = StudentCategoryFeeDiscount.find_all_by_finance_fee_category_id(self.id, :joins=>'INNER JOIN students ON fee_discounts.receiver_id = students.student_category_id')
+    batch_discounts = BatchFeeDiscount.where(["finance_fee_category_id = ?",self.id])
+    student_discounts = StudentFeeDiscount.where(["finance_fee_category_id = ? AND receiver_id =?",self.id,student.id])
+    category_discounts = StudentCategoryFeeDiscount.where(["finance_fee_category_id =?",self.id]).joins("INNER JOIN students ON fee_discounts.receiver_id = students.student_category_id")
     total_discount = 0
     total_discount += batch_discounts.map{|s| s.discount}.sum unless batch_discounts.nil?
     total_discount += student_discounts.map{|s| s.discount}.sum unless student_discounts.nil?
@@ -95,18 +93,18 @@ class FinanceFeeCategory < ActiveRecord::Base
   end
 
   def self.common_active
-    self.find(:all , :conditions => ["finance_fee_categories.is_master = '#{1}' and finance_fee_categories.is_deleted = '#{false}'"], :joins=>"INNER JOIN batches on finance_fee_categories.batch_id = batches.id AND batches.is_active = 1 AND batches.is_deleted = 0 ",:group => :name)
+    self.where(["finance_fee_categories.is_master = '#{1}' and finance_fee_categories.is_deleted = '#{false}'"]).joins("INNER JOIN batches on finance_fee_categories.batch_id = batches.id AND batches.is_active = 1 AND batches.is_deleted = 0 ").group(:name)
   end
 
 
   def is_collection_open
-    collection = FinanceFeeCollection.find_all_by_fee_category_id(self.id,:conditions=>"start_date < '#{Date.today.to_date}' and due_date > '#{Date.today.to_date}'")
+    collection = FinanceFeeCollection.where(["fee_category_id =? AND start_date < ? AND due_date  > ?",self.id,Date.today.to_date,Date.today.to_date])
     collection.reject!{ |c|c.no_transaction_present } unless collection.nil?
     collection.present?
   end
 
   def have_common_particular?
-     self.fee_particulars.find_all_by_student_category_id_and_admission_no(nil,nil).count > 0 ? true : false
+     self.fee_particulars.where(["student_category_id = ? AND admission_no =?",nil,nil]).count > 0 ? true : false
   end
   
   

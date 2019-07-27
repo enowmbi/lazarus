@@ -15,13 +15,13 @@
 #WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #See the License for the specific language governing permissions and
 #limitations under the License.
-class FaGroup < ActiveRecord::Base
+class FaGroup < ApplicationRecord
   has_many :fa_criterias
   has_and_belongs_to_many :subjects
   belongs_to :cce_exam_category
   has_many :cce_reports, :through=>:fa_criterias 
 
-  named_scope :active,:conditions=>{:is_deleted=>false}
+  scope :active,lambda{where(:is_deleted=>false)}
 
   validates_presence_of :name, :max_marks
   def validate

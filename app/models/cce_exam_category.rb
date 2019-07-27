@@ -15,7 +15,7 @@
 #WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #See the License for the specific language governing permissions and
 #limitations under the License.
-class CceExamCategory < ActiveRecord::Base
+class CceExamCategory < ApplicationRecord
   has_many                :cce_weightages
   has_many :cce_exam_categories_exam_groups
   has_many :exam_groups,  :through => :cce_exam_categories_exam_groups

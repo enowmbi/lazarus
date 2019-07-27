@@ -16,14 +16,14 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-class Attendance < ActiveRecord::Base
+class Attendance < ApplicationRecord
   belongs_to :student
   belongs_to :batch
 
   validates_presence_of :reason,:month_date,:batch_id,:student_id
   validates_uniqueness_of :student_id, :scope => [:month_date],:message=>"already marked as absent"
-  named_scope :by_month, lambda { |d| { :conditions  => { :month_date  => d.beginning_of_month..d.end_of_month } } }
-  named_scope :by_month_and_batch, lambda { |d,b| {:conditions  => { :month_date  => d.beginning_of_month..d.end_of_month,:batch_id=>b } } }
+  scope :by_month, lambda { |d|  where({:month_date  => d.beginning_of_month..d.end_of_month}) }
+  scope :by_month_and_batch, lambda { |d,b| where({:month_date  => d.beginning_of_month..d.end_of_month,:batch_id=>b }) }
   #validate :student_current_batch
 
   def validate

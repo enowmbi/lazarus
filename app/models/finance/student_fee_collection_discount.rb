@@ -22,7 +22,6 @@ class StudentFeeCollectionDiscount < FeeCollectionDiscount
 
   validates_presence_of  :receiver_id , :message => "#{I18n.t('student_admission_no_cant_be_blank')}"
 
-  
 
   def student_name
     s =Student.find(self.receiver_id)

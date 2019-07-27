@@ -15,21 +15,21 @@
 #WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #See the License for the specific language governing permissions and
 #limitations under the License.
-class Observation < ActiveRecord::Base
+class Observation < ApplicationRecord
   belongs_to  :observation_group
   has_many    :descriptive_indicators,  :as=>:describable
   has_many    :assessment_scores, :through=>:descriptive_indicators
   accepts_nested_attributes_for :descriptive_indicators
   has_many    :cce_reports, :as=>:observable
 
-  default_scope :order=>'sort_order ASC'
-  named_scope :active,:conditions=>{:is_active=>true}
+  default_scope lambda{order('sort_order ASC')}
+  scope :active, lambda{where(:is_active=>true)}
 
   def next_record
-    observation_group.observations.first(:conditions => ['order > ?',order])
+    observation_group.observations.where(['order > ?',order]).first
   end
   def prev_record
-    observation_group.observations.last(:conditions => ['order < ?',order])
+    observation_group.observations.where(['order < ?',order]).last
   end
 
   def validate
