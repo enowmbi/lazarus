@@ -1,0 +1,21 @@
+Loading application environment...
+Loading code in search of Active Record models...
+Generating Entity-Relationship Diagram for 122 models...
+Warning: Ignoring invalid model CceGradeSet (table cce_grade_sets does not exist)
+Warning: Ignoring invalid model PrivilegeTag (table privilege_tags does not exist)
+Warning: Ignoring invalid model StudentPreviousData (table student_previous_data does not exist)
+Warning: Ignoring invalid model SubjectAmount (table subject_amounts does not exist)
+Warning: Ignoring invalid model TimeZone (table time_zones does not exist)
+Warning: Ignoring invalid association :immediate_contact on ArchivedStudent (uninitialized constant ArchivedStudent::ImmediateContact)
+Warning: Ignoring invalid association :school on BatchStudent (uninitialized constant BatchStudent::School)
+Warning: Ignoring invalid association :cce_exam_categories_exam_groups on CceExamCategory (uninitialized constant CceExamCategory::CceExamCategoriesExamGroup)
+Warning: Ignoring invalid association :exam_groups on CceExamCategory (uninitialized constant CceExamCategory::CceExamCategoriesExamGroup)
+Warning: Ignoring invalid association :cce_grade_set on CceGrade (model CceGradeSet exists, but is not included in domain)
+Warning: Ignoring invalid association :subject_amounts on Course (model SubjectAmount exists, but is not included in domain)
+Warning: Ignoring invalid association :components on FinanceFee (uninitialized constant FinanceFee::FinanceFeeComponent)
+Warning: Ignoring invalid association :monthly_paslips on PayrollCategory (uninitialized constant PayrollCategory::MonthlyPaslip)
+Warning: Ignoring invalid association :cce_grade_set on ObservationGroup (model CceGradeSet exists, but is not included in domain)
+Warning: Ignoring invalid association :privilege_tag on Privilege (model PrivilegeTag exists, but is not included in domain)
+Warning: Ignoring invalid association :immediate_contact on Student (uninitialized constant Student::ImmediateContact)
+Warning: Ignoring invalid association :student_previous_data on Student (model StudentPreviousData exists, but is not included in domain)
+Done! Saved diagram to erd.pdf.
