@@ -1,2 +1,0 @@
-# lazarus
-School Management System
