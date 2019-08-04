@@ -1,10 +1,9 @@
 # README
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Build Status](https://travis-ci.org/enowmbi/Rails-Blog.svg?branch=master)](https://travis-ci.org/enowmbi/Rails-Blog)
-[![Coverage Status](https://coveralls.io/repos/github/enowmbi/Rails-Blog/badge.svg?branch=master)](https://coveralls.io/github/enowmbi/Rails-Blog?branch=master)
-[![Code Climate](https://codeclimate.com/github/codeclimate/codeclimate/badges/gpa.svg)](https://codeclimate.com/github/enowmbi/Rails-Blog)
-application up and running.
+[![Build Status](https://travis-ci.org/enowmbi/lazarus.svg?branch=master)](https://travis-ci.org/enowmbi/lazarus)
+[![Coverage Status](https://coveralls.io/repos/github/enowmbi/lazarus/badge.svg?branch=master)](https://coveralls.io/github/enowmbi/lazarus?branch=master)
+[![Code Climate](https://codeclimate.com/github/codeclimate/codeclimate/badges/gpa.svg)](https://codeclimate.com/github/enowmbi/lazarus)
 
 Things you may want to cover:
 
