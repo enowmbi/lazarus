@@ -17,26 +17,24 @@
 #limitations under the License.
 
 class ArchivedStudentController < ApplicationController
-  filter_access_to :all
-  before_filter :login_required
+  #TODO filter_access_to :all
+  before_action :login_required
 
   def profile
     @current_user = current_user
     @archived_student = ArchivedStudent.find(params[:id])
-    @additional_fields = StudentAdditionalField.all(:conditions=>"status = true")
+    @additional_fields = StudentAdditionalField.where("status = true")
   end
 
   def show
     @student = ArchivedStudent.find_by_admission_no(params[:id])
-    send_data(@student.photo_data,
-      :type => @student.photo_content_type,
-      :filename => @student.photo_filename,
-      :disposition => 'inline')
+    #TODO send_data(@student.photo_data,type => @student.photo_content_type,:filename => @student.photo_filename,:disposition => 'inline')
   end
 
   def guardians
     @archived_student = ArchivedStudent.find(params[:id])
-    @parents = ArchivedGuardian.find(:all, :conditions=>"ward_id = #{@archived_student.id}")
+    #TODO @parents = ArchivedGuardian.find(:all, :conditions=>"ward_id = #{@archived_student.id}")
+    @parents = ArchivedGuardian.where(["ward_id = ?", @archived_student.id])
   end
 
 
@@ -50,9 +48,9 @@ class ArchivedStudentController < ApplicationController
   def reports
     @student= ArchivedStudent.find params[:id]
     @batch = @student.batch
-    @grouped_exams = GroupedExam.find_all_by_batch_id(@batch.id)
-    @normal_subjects = Subject.find_all_by_batch_id(@batch.id,:conditions=>"no_exams = false AND elective_group_id IS NULL AND is_deleted = false")
-    @student_electives = StudentsSubject.find_all_by_student_id(@student.former_id,:conditions=>{:batch_id=>@batch.id})
+    @grouped_exams = GroupedExam.where(["batch_id = ?", @batch.id])
+    @normal_subjects = Subject.where(["batch_id = ? AND no_exams = false AND elective_group_id IS NULL AND is_deleted = false",@batch.id])
+    @student_electives = StudentsSubject.where(["student_id = ? AND batch_id = ?",@student.former_id,@batch.id])
     @elective_subjects = []
     @student_electives.each do |e|
       @elective_subjects.push Subject.find(e.subject_id)
@@ -80,16 +78,16 @@ class ArchivedStudentController < ApplicationController
     @batch = Batch.find(params[:year])
     @type= params[:type]
     if params[:type] == 'grouped'
-      @grouped_exams = GroupedExam.find_all_by_batch_id(@batch.id)
+      @grouped_exams = GroupedExam.where(["batch_id = ?",@batch.id])
       @exam_groups = []
       @grouped_exams.each do |x|
         @exam_groups.push ExamGroup.find(x.exam_group_id)
       end
     else
-      @exam_groups = ExamGroup.find_all_by_batch_id(@batch.id)
+      @exam_groups = ExamGroup.where("batch_id =?",@batch.id)
     end
-    general_subjects = Subject.find_all_by_batch_id(@batch.id, :conditions=>"elective_group_id IS NULL and is_deleted=false")
-    student_electives = StudentsSubject.find_all_by_student_id(@student.id,:conditions=>"batch_id = #{@batch.id}")
+    general_subjects = Subject.where(["batch_id =? AND elective_group_id IS NULL and is_deleted=false",@batch.id])
+    student_electives = StudentsSubject.where(["student_id = ? AND batch_id = ?",@student.id,@batch.id])
     elective_subjects = []
     student_electives.each do |elect|
       elective_subjects.push Subject.find(elect.subject_id)
@@ -98,7 +96,7 @@ class ArchivedStudentController < ApplicationController
   end
 
   def student_report
-    @config = Configuration.find_by_config_key('StudentAttendanceType')
+    @config = Config.find_by_config_key('StudentAttendanceType')
     @student = ArchivedStudent.find(params[:id])
     @batch = Batch.find(params[:year])
     @start_date = @batch.start_date.to_date
@@ -109,17 +107,17 @@ class ArchivedStudentController < ApplicationController
     end
     unless @config.config_value == 'Daily'
       @academic_days=@batch.subject_hours(@start_date, @end_date, 0).values.flatten.compact.count
-      @student_leaves = SubjectLeave.find(:all,  :conditions =>{:batch_id=>@batch.id,:student_id=>@student.former_id,:month_date => @start_date..@end_date})
+      @student_leaves = SubjectLeave.where({:batch_id=>@batch.id,:student_id=>@student.former_id,:month_date => @start_date..@end_date})
       @leaves= @student_leaves.count
       @leaves||=0
       @attendance = (@academic_days - @leaves)
       @percent = (@attendance.to_f/@academic_days)*100 unless @academic_days == 0
     else
-      @student_leaves = Attendance.find(:all,  :conditions =>{:student_id=>@student.former_id,:month_date => @start_date..@end_date})
+      @student_leaves = Attendance.where({:student_id=>@student.former_id,:month_date => @start_date..@end_date})
       @academic_days=@batch.academic_days.select{|v| v<=@end_date}.count
-      leaves_forenoon=Attendance.count(:all,:conditions=>{:student_id=>@student.former_id,:forenoon=>true,:afternoon=>false,:month_date => @start_date..@end_date})
-      leaves_afternoon=Attendance.count(:all,:conditions=>{:student_id=>@student.former_id,:forenoon=>false,:afternoon=>true,:month_date => @start_date..@end_date})
-      leaves_full=Attendance.count(:all,:conditions=>{:student_id=>@student.former_id,:forenoon=>true,:afternoon=>true,:month_date => @start_date..@end_date})
+      leaves_forenoon=Attendance.where({:student_id=>@student.former_id,:forenoon=>true,:afternoon=>false,:month_date => @start_date..@end_date}).count
+      leaves_afternoon=Attendance.where({:student_id=>@student.former_id,:forenoon=>false,:afternoon=>true,:month_date => @start_date..@end_date}).count
+      leaves_full=Attendance.where({:student_id=>@student.former_id,:forenoon=>true,:afternoon=>true,:month_date => @start_date..@end_date}).count
       @leaves=leaves_full.to_f+(0.5*(leaves_forenoon.to_f+leaves_afternoon.to_f))
       @attendance = (@academic_days - @leaves)
       @percent = (@attendance.to_f/@academic_days)*100 unless @academic_days == 0
@@ -134,8 +132,8 @@ class ArchivedStudentController < ApplicationController
       @exam_group = ExamGroup.find(params[:exam_report][:exam_group_id])
       @batch = @exam_group.batch
       @student = @batch.students.first
-      general_subjects = Subject.find_all_by_batch_id(@batch.id, :conditions=>"elective_group_id IS NULL")
-      student_electives = StudentsSubject.find_all_by_student_id(@student.id,:conditions=>"batch_id = #{@batch.id}")
+      general_subjects = Subject.where("batch_id = ?  AND elective_group_id IS NULL",@batch.id)
+      student_electives = StudentsSubject.where("student_id  = ? AND batch_id = ? ",@student.id,@batch.id)
       elective_subjects = []
       student_electives.each do |elect|
         elective_subjects.push Subject.find(elect.subject_id)
@@ -153,8 +151,8 @@ class ArchivedStudentController < ApplicationController
       @student = ArchivedStudent.find(params[:student])
       @student.id=@student.former_id
       @batch = @student.batch
-      general_subjects = Subject.find_all_by_batch_id(@student.batch.id, :conditions=>"elective_group_id IS NULL")
-      student_electives = StudentsSubject.find_all_by_student_id(@student.former_id,:conditions=>"batch_id = #{@student.batch.id}")
+      general_subjects = Subject.where("batch_id = ? AND elective_group_id IS NULL",@student.batch.id)
+      student_electives = StudentsSubject.where("student_id = ? AND batch_id  = ? ",@student.former_id,@student.batch.id)
       elective_subjects = []
       student_electives.each do |elect|
         elective_subjects.push Subject.find(elect.subject_id)
@@ -176,8 +174,8 @@ class ArchivedStudentController < ApplicationController
     @student = ArchivedStudent.find_by_former_id(params[:student])
     @student.id = @student.former_id
     @batch = @student.batch
-    general_subjects = Subject.find_all_by_batch_id(@student.batch.id, :conditions=>"elective_group_id IS NULL")
-    student_electives = StudentsSubject.find_all_by_student_id(@student.id,:conditions=>"batch_id = #{@student.batch.id}")
+    general_subjects = Subject.where("batch_id = ? AND elective_group_id IS NULL",@student.batch.id)
+    student_electives = StudentsSubject.where("student_id = ? AND batch_id = ? ",@student.id,@student.batch.id)
     elective_subjects = []
     student_electives.each do |elect|
       elective_subjects.push Subject.find(elect.subject_id)
@@ -201,7 +199,7 @@ class ArchivedStudentController < ApplicationController
     @student.id=@student.former_id
     @batch = @student.batch
     @subject = Subject.find(params[:subject])
-    @exam_groups = ExamGroup.find(:all,:conditions=>{:batch_id=>@batch.id})
+    @exam_groups = ExamGroup.where({:batch_id=>@batch.id})
     @exam_groups.reject!{|e| e.result_published==false}
     @graph = open_flash_chart_object(770, 350,
       "/archived_student/graph_for_generated_report3?subject=#{@subject.id}&student=#{@student.id}")
@@ -223,17 +221,17 @@ class ArchivedStudentController < ApplicationController
       @batch = @student.batch
       @type  = params[:type]
       if params[:type] == 'grouped'
-        @grouped_exams = GroupedExam.find_all_by_batch_id(@batch.id)
+        @grouped_exams = GroupedExam.where(["batch_id =?",@batch.id])
         @exam_groups = []
         @grouped_exams.each do |x|
           @exam_groups.push ExamGroup.find(x.exam_group_id)
         end
       else
-        @exam_groups = ExamGroup.find_all_by_batch_id(@batch.id)
+        @exam_groups = ExamGroup.where(["batch_id = ? ",@batch.id])
         @exam_groups.reject!{|e| e.result_published==false}
       end
-      general_subjects = Subject.find_all_by_batch_id(@student.batch.id, :conditions=>"elective_group_id IS NULL AND is_deleted=false")
-      student_electives = StudentsSubject.find_all_by_student_id(@student.former_id,:conditions=>"batch_id = #{@student.batch.id}")
+      general_subjects = Subject.where(["batch_id = ? AND elective_group_id IS NULL AND is_deleted=false",@student.batch.id])
+      student_electives = StudentsSubject.where(["student_id = ? AND batch_id = ?",@student.former_id,@student.batch.id])
       elective_subjects = []
       student_electives.each do |elect|
         elective_subjects.push Subject.find(elect.subject_id)
@@ -252,17 +250,17 @@ class ArchivedStudentController < ApplicationController
       @batch = @student.batch
       @type  = params[:type]
       if params[:type] == 'grouped'
-        @grouped_exams = GroupedExam.find_all_by_batch_id(@batch.id)
+        @grouped_exams = GroupedExam.where(["batch_id = ?",@batch.id])
         @exam_groups = []
         @grouped_exams.each do |x|
           @exam_groups.push ExamGroup.find(x.exam_group_id)
         end
       else
-        @exam_groups = ExamGroup.find_all_by_batch_id(@batch.id)
+        @exam_groups = ExamGroup.where(["batch_id = ? ",@batch.id])
         @exam_groups.reject!{|e| e.result_published==false}
       end
-      general_subjects = Subject.find_all_by_batch_id(@student.batch.id, :conditions=>"elective_group_id IS NULL")
-      student_electives = StudentsSubject.find_all_by_student_id(@student.id,:conditions=>"batch_id = #{@student.batch.id}")
+      general_subjects = Subject.where(["batch_id = ? AND elective_group_id IS NULL",@student.batch.id])
+      student_electives = StudentsSubject.where(["student_id = ? AND batch_id = ? ",@student.id,@student.batch.id])
       elective_subjects = []
       student_electives.each do |elect|
         elective_subjects.push Subject.find(elect.subject_id)
@@ -285,8 +283,8 @@ class ArchivedStudentController < ApplicationController
     student.id=student.former_id
     examgroup = ExamGroup.find(params[:examgroup])
     batch = student.batch
-    general_subjects = Subject.find_all_by_batch_id(batch.id, :conditions=>"elective_group_id IS NULL")
-    student_electives = StudentsSubject.find_all_by_student_id(student.id,:conditions=>"batch_id = #{batch.id}")
+    general_subjects = Subject.where(["batch_id = ? AND elective_group_id IS NULL",batch.id])
+    student_electives = StudentsSubject.where(["student_id = ? AND batch_id = ?",student.id,batch.id])
     elective_subjects = []
     student_electives.each do |elect|
       elective_subjects.push Subject.find(elect.subject_id)
@@ -352,7 +350,7 @@ class ArchivedStudentController < ApplicationController
     student = ArchivedStudent.find_by_former_id(params[:student])
     student.id = student.former_id
     subject = Subject.find params[:subject]
-    exams = Exam.find_all_by_subject_id(subject.id, :order => 'start_time asc')
+    exams = Exam.where(["subject_id = ? ",subject.id]).order('start_time asc')
     exams.reject!{|e| e.exam_group.result_published==false}
 
     data = []
