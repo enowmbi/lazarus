@@ -17,7 +17,7 @@
 #limitations under the License.
 
 class AssessmentToolsController < ApplicationController
-  before_filter :login_required
+  before_action :login_required
   filter_access_to :all
   def index
     @descriptive=DescriptiveIndicator.find(params[:descriptive_indicator_id])
