@@ -17,8 +17,8 @@
 #limitations under the License.
 
 class AssessmentScoresController < ApplicationController
-  before_filter :login_required
-  filter_access_to :all
+  before_action :login_required
+ #TODO filter_access_to :all
   def exam_fa_groups
     @exam=Exam.find params[:id]
     @batch=@exam.subject.batch
@@ -51,7 +51,7 @@ class AssessmentScoresController < ApplicationController
     end
     subject=@exam.subject
     if subject.elective_group_id.nil?
-      @students=@batch.students.all(:order=>"first_name ASC")
+      @students=@batch.students.order("first_name ASC")
     else
       @students=subject.students
     end
@@ -69,7 +69,7 @@ class AssessmentScoresController < ApplicationController
     end
     di=@fa_criterias.collect(&:descriptive_indicator_ids).flatten
     @scores=Hash.new { |h, k| h[k] = Hash.new(&h.default_proc) }
-    scores=AssessmentScore.find(:all,:conditions=>{:student_id=>@student.id,:batch_id=>@batch.id,:descriptive_indicator_id=>di, :exam_id=>@exam.id}).group_by(&:student_id)
+    scores=AssessmentScore.where({:student_id=>@student.id,:batch_id=>@batch.id,:descriptive_indicator_id=>di, :exam_id=>@exam.id}).group_by(&:student_id)
     scores.each do |k,v|
       @scores[k]=v.group_by{|g| g.descriptive_indicator_id}
     end
@@ -132,8 +132,8 @@ class AssessmentScoresController < ApplicationController
       end
     end
     @observation_group=ObservationGroup.find(params[:observation_group_id])
-    @observations=@observation_group.observations.find(:all,:conditions=>{:is_active=>true},:order=>"sort_order ASC")
-    @students=@batch.students.all(:order=>"first_name ASC")
+    @observations=@observation_group.observations.where(:is_active=>true).order("sort_order ASC")
+    @students=@batch.students.order("first_name ASC")
     if params[:student].present?
       @student=Student.find(params[:student])
     else
@@ -142,7 +142,8 @@ class AssessmentScoresController < ApplicationController
     @grading_levels=@observation_group.cce_grade_set.cce_grades
     di=@observations.collect(&:descriptive_indicator_ids).flatten
     @scores=Hash.new { |h, k| h[k] = Hash.new(&h.default_proc) }
-    scores=AssessmentScore.find(:all,:conditions=>{:student_id=>@student.id,:batch_id=>@batch.id,:descriptive_indicator_id=>di}).group_by(&:student_id)
+    #TODO 'check  difference between group_by and group  - see below
+    scores=AssessmentScore.where(:student_id=>@student.id,:batch_id=>@batch.id,:descriptive_indicator_id=>di).group_by(&:student_id)
     scores.each do |k,v|
       @scores[k]=v.group_by{|g| g.descriptive_indicator_id}
     end
