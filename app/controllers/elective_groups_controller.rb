@@ -17,11 +17,11 @@
 #limitations under the License.
 
 class ElectiveGroupsController < ApplicationController
-  before_filter :pre_load_objects
-  before_filter :login_required
+  before_action :pre_load_objects
+  before_action :login_required
   filter_access_to :all
   def index
-    @elective_groups = ElectiveGroup.for_batch(@batch.id, :include => :subjects)
+    @elective_groups = ElectiveGroup.for_batch(@batch.id).includes(:subjects)
   end
 
   def new
@@ -62,12 +62,12 @@ class ElectiveGroupsController < ApplicationController
   end
 
   def show
-    @electives = Subject.find_all_by_batch_id_and_elective_group_id(@batch.id,@elective_group.id, :conditions=>["is_deleted = false"])
+    @electives = Subject.where("batch_id = ? AND elective_group_id = ? AND is_deleted =false",@batch.id,@elective_group.id)
   end
 
   private
   def pre_load_objects
-    @batch = Batch.find(params[:batch_id], :include => :course)
+    @batch = Batch.find(params[:batch_id]).includes(:course)
     @course = @batch.course
     @elective_group = ElectiveGroup.find(params[:id]) unless params[:id].nil?
   end
