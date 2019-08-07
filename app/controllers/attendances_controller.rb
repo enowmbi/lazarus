@@ -17,13 +17,13 @@
 #limitations under the License.
 
 class AttendancesController < ApplicationController
-  before_filter :login_required
+  before_action :login_required
   filter_access_to :all
-  before_filter :only_assigned_employee_allowed, :except => 'index'
-  before_filter :only_privileged_employee_allowed, :only => 'index'
-  before_filter :default_time_zone_present_time
+  before_action :only_assigned_employee_allowed, :except => 'index'
+  before_action :only_privileged_employee_allowed, :only => 'index'
+  before_action :default_time_zone_present_time
   def index
-    @config = Configuration.find_by_config_key('StudentAttendanceType')
+    @config = Config.find_by_config_key('StudentAttendanceType')
     @date_today = @local_tzone_time.to_date
     if current_user.admin?
       @batches = Batch.active
@@ -48,7 +48,7 @@ class AttendancesController < ApplicationController
         if @batch.employee_id.to_i==@current_user.employee_record.id
           @subjects= @batch.subjects
         else
-          @subjects= Subject.find(:all,:joins=>"INNER JOIN employees_subjects ON employees_subjects.subject_id = subjects.id AND employee_id = #{@current_user.employee_record.id} AND batch_id = #{@batch.id} ")
+          @subjects= Subject.joins(:employees_subjects).where("employees_subjects.employee_id = ? AND batch_id = ?",@current_user.employee_record.id, @batch.id)
         end
       end
       render(:update) do |page|
@@ -63,7 +63,7 @@ class AttendancesController < ApplicationController
   end
 
   def show
-    @config = Configuration.find_by_config_key('StudentAttendanceType')
+    @config = Config.find_by_config_key('StudentAttendanceType')
     unless params[:next].nil?
       @today = params[:next].to_date
     else
@@ -73,17 +73,18 @@ class AttendancesController < ApplicationController
     end_date = @today.end_of_month
     if @config.config_value == 'Daily'
       @batch = Batch.find(params[:batch_id])
-      @students = Student.find_all_by_batch_id(@batch.id)
+      @students = Student.where(:batch_id =>@batch.id)
       #      @dates = ((@batch.end_date.to_date > @today.end_of_month) ? (@today.beginning_of_month..@today.end_of_month) : (@today.beginning_of_month..@batch.end_date.to_date))
       @dates=@batch.working_days(@today)
     else
       @sub =Subject.find params[:subject_id]
       @batch=Batch.find(@sub.batch_id)
       unless @sub.elective_group_id.nil?
-        elective_student_ids = StudentsSubject.find_all_by_subject_id(@sub.id).map { |x| x.student_id }
-        @students = Student.find_all_by_batch_id(@batch, :conditions=>"FIND_IN_SET(id,\"#{elective_student_ids.split.join(',')}\")")
+        elective_student_ids = StudentsSubject.where(:subject_id => @sub.id).map { |x| x.student_id }
+        #TODO FIND_IN_SET @students = Student.find_all_by_batch_id(@batch, :conditions=>"FIND_IN_SET(id,\"#{elective_student_ids.split.join(',')}\")")
+        @students = Student.where(:batch_id => @batch,).where("FIND_IN_SET(id,\"#{elective_student_ids.split.join(',')}\")")
       else
-        @students = Student.find_all_by_batch_id(@batch)
+        @students = Student.where(:batch_id => @batch)
       end
       @dates=Timetable.tte_for_range(@batch,@today,@sub)
       @dates_key=@dates.keys - @batch.holiday_event_dates
@@ -99,7 +100,7 @@ class AttendancesController < ApplicationController
       @batch=Batch.find(@sub.batch_id)
       @today = params[:next].present? ? params[:next].to_date : @local_tzone_time.to_date
       unless @sub.elective_group_id.nil?
-        elective_student_ids = StudentsSubject.find_all_by_subject_id(@sub.id).map { |x| x.student_id }
+        elective_student_ids = StudentsSubject.where(:subject_id => @sub.id).map { |x| x.student_id }
         @students = @batch.students.by_first_name.with_full_name_only.all(:conditions=>"FIND_IN_SET(id,\"#{elective_student_ids.split.join(',')}\")")
       else
         @students = @batch.students.by_first_name.with_full_name_only
@@ -172,7 +173,7 @@ class AttendancesController < ApplicationController
   end
   
   def new
-    @config = Configuration.find_by_config_key('StudentAttendanceType')
+    @config = Config.find_by_config_key('StudentAttendanceType')
     if @config.config_value=='Daily'
       @student = Student.find(params[:id])
       @month_date = params[:date]
@@ -188,7 +189,7 @@ class AttendancesController < ApplicationController
   end
 
   def create
-    @config = Configuration.find_by_config_key('StudentAttendanceType')
+    @config = Config.find_by_config_key('StudentAttendanceType')
     if @config.config_value=="SubjectWise"
       @student = Student.find(params[:subject_leave][:student_id])
       @tte=TimetableEntry.find(params[:timetable_entry])
@@ -243,7 +244,7 @@ class AttendancesController < ApplicationController
   end
 
   def edit
-    @config = Configuration.find_by_config_key('StudentAttendanceType')
+    @config = Config.find_by_config_key('StudentAttendanceType')
     if @config.config_value=='Daily'
       @absentee = Attendance.find params[:id]
     else
@@ -257,7 +258,7 @@ class AttendancesController < ApplicationController
   end
 
   def update
-    @config = Configuration.find_by_config_key('StudentAttendanceType')
+    @config = Config.find_by_config_key('StudentAttendanceType')
     if @config.config_value=='Daily'
       @absentee = Attendance.find params[:id]
       @student = Student.find(@absentee.student_id)
@@ -280,7 +281,7 @@ class AttendancesController < ApplicationController
 
 
   def destroy
-    @config = Configuration.find_by_config_key('StudentAttendanceType')
+    @config = Config.find_by_config_key('StudentAttendanceType')
     if @config.config_value=='Daily'
       @absentee = Attendance.find params[:id]
     else
