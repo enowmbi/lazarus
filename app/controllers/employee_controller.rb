@@ -17,15 +17,15 @@
 #limitations under the License.
 
 class EmployeeController < ApplicationController
-  before_filter :login_required,:configuration_settings_for_hr
+  before_action :login_required,:configuration_settings_for_hr
   filter_access_to :all
-  before_filter :protect_other_employee_data, :only => [:individual_payslip_pdf,:timetable,:timetable_pdf,:profile_payroll_details,\
+  before_action :protect_other_employee_data, :only => [:individual_payslip_pdf,:timetable,:timetable_pdf,:profile_payroll_details,\
       :view_payslip ]
-  before_filter :limit_employee_profile_access , :only => [:profile,:profile_pdf]
+  before_action :limit_employee_profile_access , :only => [:profile,:profile_pdf]
 
   def add_category
-    @categories = EmployeeCategory.find(:all,:order => "name asc",:conditions=>'status = 1')
-    @inactive_categories = EmployeeCategory.find(:all,:conditions=>'status = 0')
+    @categories = EmployeeCategory.where("status = 1").order("name asc")
+    @inactive_categories = EmployeeCategory.where("status = 0")
     @category = EmployeeCategory.new(params[:category])
     if request.post? and @category.save
       flash[:notice] = t('flash1')
@@ -35,13 +35,13 @@ class EmployeeController < ApplicationController
   
   def edit_category
     @category = EmployeeCategory.find(params[:id])
-    employees = Employee.find(:all ,:conditions=>"employee_category_id = #{params[:id]}")
+    employees = Employee.where("employee_category_id = ?",params[:id])
     if request.post?
       if (params[:category][:status] == 'false' and employees.blank?) or params[:category][:status] == 'true'
         
         if @category.update_attributes(params[:category])
           unless @category.status
-            position = EmployeePosition.find_all_by_employee_category_id(@category.id)
+            position = EmployeePosition.where(:employee_category_id => @category.id)
             position.each do |p|
               p.update_attributes(:status=> '0')
             end
@@ -57,14 +57,14 @@ class EmployeeController < ApplicationController
   end
 
   def delete_category
-    employees = Employee.find(:all ,:conditions=>"employee_category_id = #{params[:id]}")
+    employees = Employee.where("employee_category_id = ?", params[:id])
     if employees.empty?
-      employees = ArchivedEmployee.find(:all ,:conditions=>"employee_category_id = #{params[:id]}")
+      employees = ArchivedEmployee.where("employee_category_id = ?",params[:id])
     end
-    category_position = EmployeePosition.find(:all, :conditions=>"employee_category_id = #{params[:id]}")
+    category_position = EmployeePosition.where("employee_category_id = ?",params[:id])
     if employees.empty? and category_position.empty?
       EmployeeCategory.find(params[:id]).destroy
-      @categories = EmployeeCategory.find :all
+      @categories = EmployeeCategory.all
       flash[:notice]=t('flash3')
       redirect_to :action => "add_category"
     else
@@ -74,9 +74,9 @@ class EmployeeController < ApplicationController
   end
 
   def add_position
-    @positions = EmployeePosition.find(:all,:order => "name asc",:conditions=>'status = 1')
-    @inactive_positions = EmployeePosition.find(:all,:order => "name asc",:conditions=>'status = 0')
-    @categories = EmployeeCategory.find(:all,:order => "name asc",:conditions=> 'status = 1')
+    @positions = EmployeePosition.where('status = 1').order("name asc")
+    @inactive_positions = EmployeePosition.where('status = 0').order("name asc")
+    @categories = EmployeeCategory.where('status = 1').order("name asc")
     @position = EmployeePosition.new(params[:position])
     if request.post? and @position.save
       flash[:notice] = t('flash5')
@@ -85,9 +85,9 @@ class EmployeeController < ApplicationController
   end
 
   def edit_position
-    @categories = EmployeeCategory.find(:all)
+    @categories = EmployeeCategory.all
     @position = EmployeePosition.find(params[:id])
-    employees = Employee.find(:all ,:conditions=>"employee_position_id = #{params[:id]}")
+    employees = Employee.where("employee_position_id = ?",params[:id])
     if request.post?
       if (params[:position][:status] == 'false' and employees.blank?) or params[:position][:status] == 'true'
         if @position.update_attributes(params[:position])
@@ -101,13 +101,13 @@ class EmployeeController < ApplicationController
   end
 
   def delete_position
-    employees = Employee.find(:all ,:conditions=>"employee_position_id = #{params[:id]}")
+    employees = Employee.where("employee_position_id = ?",params[:id])
     if employees.empty?
-      employees = ArchivedEmployee.find(:all ,:conditions=>"employee_position_id = #{params[:id]}")
+      employees = ArchivedEmployee.where("employee_position_id = ?",params[:id])
     end
     if employees.empty?
       EmployeePosition.find(params[:id]).destroy
-      @positions = EmployeePosition.find :all
+      @positions = EmployeePosition.all
       flash[:notice]=t('flash3')
       redirect_to :action => "add_position"
     else
@@ -117,8 +117,8 @@ class EmployeeController < ApplicationController
   end
 
   def add_department
-    @departments = EmployeeDepartment.find(:all,:order => "name asc",:conditions=>'status = 1')
-    @inactive_departments = EmployeeDepartment.find(:all,:order => "name asc",:conditions=>'status = 0')
+    @departments = EmployeeDepartment.where('status = 1').order("name asc")
+    @inactive_departments = EmployeeDepartment.where('status = 0').order("name asc")
     @department = EmployeeDepartment.new(params[:department])
     if request.post? and @department.save
       flash[:notice] =  t('flash7')
@@ -128,7 +128,7 @@ class EmployeeController < ApplicationController
 
   def edit_department
     @department = EmployeeDepartment.find(params[:id])
-    employees = Employee.find(:all ,:conditions=>"employee_department_id = #{params[:id]}")
+    employees = Employee.where("employee_department_id = ?",params[:id])
     if request.post?
       if (params[:department][:status] == 'false' and employees.blank?) or params[:department][:status] == 'true'
         if @department.update_attributes(params[:department])
@@ -141,13 +141,13 @@ class EmployeeController < ApplicationController
   end
 
   def delete_department
-    employees = Employee.find(:all ,:conditions=>"employee_department_id = #{params[:id]}")
+    employees = Employee.where("employee_department_id = ?",params[:id])
     if employees.empty?
-      employees = ArchivedEmployee.find(:all ,:conditions=>"employee_department_id = #{params[:id]}")
+      employees = ArchivedEmployee.where("employee_department_id = ?",params[:id])
     end
     if employees.empty?
       EmployeeDepartment.find(params[:id]).destroy
-      @departments = EmployeeDepartment.find :all
+      @departments = EmployeeDepartment.all
       flash[:notice]=t('flash3')
       redirect_to :action => "add_department"
     else
@@ -157,8 +157,8 @@ class EmployeeController < ApplicationController
   end
 
   def add_grade
-    @grades = EmployeeGrade.find(:all,:order => "name asc",:conditions=>'status = 1')
-    @inactive_grades = EmployeeGrade.find(:all,:order => "name asc",:conditions=>'status = 0')
+    @grades = EmployeeGrade.where('status = 1').order("name asc")
+    @inactive_grades = EmployeeGrade.where('status = 0').order("name asc")
     @grade = EmployeeGrade.new(params[:grade])
     if request.post? and @grade.save
       flash[:notice] =  t('flash9')
@@ -168,7 +168,7 @@ class EmployeeController < ApplicationController
 
   def edit_grade
     @grade = EmployeeGrade.find(params[:id])
-    employees = Employee.find(:all ,:conditions=>"employee_grade_id = #{params[:id]}")
+    employees = Employee.where("employee_grade_id = ? ",params[:id])
     if request.post?
       if (params[:grade][:status] == 'false' and employees.blank?) or params[:grade][:status] == 'true'
         if @grade.update_attributes(params[:grade])
@@ -181,13 +181,13 @@ class EmployeeController < ApplicationController
   end
 
   def delete_grade
-    employees = Employee.find(:all ,:conditions=>"employee_grade_id = #{params[:id]}")
+    employees = Employee.where("employee_grade_id = ?",params[:id])
     if employees.empty?
-      employees = ArchivedEmployee.find(:all ,:conditions=>"employee_grade_id = #{params[:id]}")
+      employees = ArchivedEmployee.where("employee_grade_id = ?",params[:id])
     end
     if employees.empty?
       EmployeeGrade.find(params[:id]).destroy
-      @grades = EmployeeGrade.find :all
+      @grades = EmployeeGrade.all
       flash[:notice]=t('flash3')
       redirect_to :action => "add_grade"
     else
@@ -197,8 +197,8 @@ class EmployeeController < ApplicationController
   end
 
   def add_bank_details
-    @bank_details = BankField.find(:all,:order => "name asc",:conditions=>{:status => true})
-    @inactive_bank_details = BankField.find(:all,:order => "name asc",:conditions=>{:status => false})
+    @bank_details = BankField.where(:status => true).order("name asc")
+    @inactive_bank_details = BankField.where(:status => false).order("name asc")
     @bank_field = BankField.new(params[:bank_field])
     if request.post? and @bank_field.save
       flash[:notice] =t('flash11')
@@ -214,10 +214,10 @@ class EmployeeController < ApplicationController
     end
   end
   def delete_bank_details
-    employees = EmployeeBankDetail.find(:all ,:conditions=>"bank_field_id = #{params[:id]}")
+    employees = EmployeeBankDetail.where("bank_field_id = ?",params[:id])
     if employees.empty?
       BankField.find(params[:id]).destroy
-      @bank_details = BankField.find(:all)
+      @bank_details = BankField.all
       flash[:notice]=t('flash3')
       redirect_to :action => "add_bank_details"
     else
@@ -227,8 +227,8 @@ class EmployeeController < ApplicationController
   end
 
   def add_additional_details
-    @additional_details = AdditionalField.find(:all, :conditions=>{:status=>true},:order=>"priority ASC")
-    @inactive_additional_details = AdditionalField.find(:all, :conditions=>{:status=>false},:order=>"priority ASC")
+    @additional_details = AdditionalField.where(:status=>true).order("priority ASC")
+    @inactive_additional_details = AdditionalField.where(:status=>false).order("priority ASC")
     @additional_field = AdditionalField.new
     @additional_field_option = @additional_field.additional_field_options.build
     if request.post?
@@ -249,7 +249,7 @@ class EmployeeController < ApplicationController
   def change_field_priority
     @additional_field = AdditionalField.find(params[:id])
     priority = @additional_field.priority
-    @additional_fields = AdditionalField.find(:all, :conditions=>{:status=>true}, :order=> "priority ASC").map{|b| b.priority.to_i}
+    @additional_fields = AdditionalField.where(:status => true).order("priority ASC").map{|b| b.priority.to_i}
     position = @additional_fields.index(priority)
     if params[:order]=="up"
       prev_field = AdditionalField.find_by_priority(@additional_fields[position - 1])
@@ -259,16 +259,16 @@ class EmployeeController < ApplicationController
     @additional_field.update_attributes(:priority=>prev_field.priority)
     prev_field.update_attributes(:priority=>priority.to_i)
     @additional_field = AdditionalField.new
-    @additional_details = AdditionalField.find(:all, :conditions=>{:status=>true},:order=>"priority ASC")
-    @inactive_additional_details = AdditionalField.find(:all, :conditions=>{:status=>false},:order=>"priority ASC")
+    @additional_details = AdditionalField.where(:status=>true).order("priority ASC")
+    @inactive_additional_details = AdditionalField.where(:status=>false).order("priority ASC")
     render(:update) do|page|
       page.replace_html "category-list", :partial=>"additional_fields"
     end
   end
 
   def edit_additional_details
-    @additional_details = AdditionalField.find(:all, :conditions=>{:status=>true},:order=>"priority ASC")
-    @inactive_additional_details = AdditionalField.find(:all, :conditions=>{:status=>false},:order=>"priority ASC")
+    @additional_details = AdditionalField.where(:status=>true).order("priority ASC")
+    @inactive_additional_details = AdditionalField.where(:status=>false).order("priority ASC")
     @additional_field = AdditionalField.find(params[:id])
     @additional_field_option = @additional_field.additional_field_options
     if request.get?
@@ -285,10 +285,10 @@ class EmployeeController < ApplicationController
 
   def delete_additional_details
     if params[:id]
-      employees = EmployeeAdditionalDetail.find(:all ,:conditions=>"additional_field_id = #{params[:id]}")
+      employees = EmployeeAdditionalDetail.where("additional_field_id = ?",params[:id])
       if employees.empty?
         AdditionalField.find(params[:id]).destroy
-        @additional_details = AdditionalField.find(:all)
+        @additional_details = AdditionalField.all
         flash[:notice]=t('flash3')
         redirect_to :action => "add_additional_details"
       else
@@ -304,15 +304,15 @@ class EmployeeController < ApplicationController
     @user = current_user
     @user_name = @user.username
     @employee1 = @user.employee_record
-    @categories = EmployeeCategory.find(:all,:order => "name asc",:conditions => "status = true")
+    @categories = EmployeeCategory.where(:status => true).order("name asc")
     @positions = []
-    @grades = EmployeeGrade.find(:all,:order => "name asc",:conditions => "status = true")
-    @departments = EmployeeDepartment.find(:all,:order => "name asc",:conditions => "status = true")
+    @grades = EmployeeGrade.where(:status => true).order("name asc")
+    @departments = EmployeeDepartment.where(:status => true).order("name asc")
     @nationalities = Country.all
     @employee = Employee.new(params[:employee])
-    @selected_value = Configuration.default_country
-    @last_admitted_employee = Employee.find(:last,:conditions=>"employee_number != 'admin'")
-    @config = Configuration.find_by_config_key('EmployeeNumberAutoIncrement')
+    @selected_value = Config.default_country
+    @last_admitted_employee = Employee.where("employee_number != 'admin'").last
+    @config = Config.find_by_config_key('EmployeeNumberAutoIncrement')
 
     if request.post?
 
@@ -331,23 +331,23 @@ class EmployeeController < ApplicationController
       else
         @employee.errors.add(:employee_number, "#{t('should_not_be_admin')}")
       end
-      @positions = EmployeePosition.find_all_by_employee_category_id(params[:employee][:employee_category_id])
+      @positions = EmployeePosition.where("employee_category_id = ? ",params[:employee][:employee_category_id])
     end
   end
 
   def update_positions
     category = EmployeeCategory.find(params[:category_id])
-    @positions = EmployeePosition.find_all_by_employee_category_id(category.id,:conditions=>'status = 1')
+    @positions = EmployeePosition.where("employee_category_id = ? AND status = 1",category.id)
     render :update do |page|
       page.replace_html 'positions1', :partial => 'positions', :object => @positions
     end
   end
 
   def edit1
-    @categories = EmployeeCategory.find(:all,:order => "name asc", :conditions => "status = true")
-    @positions = EmployeePosition.find(:all)
-    @grades = EmployeeGrade.find(:all,:order => "name asc", :conditions => "status = true")
-    @departments = EmployeeDepartment.find(:all,:order => "name asc", :conditions => "status = true")
+    @categories = EmployeeCategory.where("status = true").order("name asc")
+    @positions = EmployeePosition.all
+    @grades = EmployeeGrade.where(:status => true).order("name asc")
+    @departments = EmployeeDepartment.where(:status => true).order("name asc")
     @employee = Employee.find(params[:id])
     @employee_user = @employee.user
     if request.post?
@@ -387,9 +387,9 @@ class EmployeeController < ApplicationController
   end
 
   def admission2
-    @countries = Country.find(:all)
+    @countries = Country.all
     @employee = Employee.find(params[:id])
-    @selected_value = Configuration.default_country
+    @selected_value = Config.default_country
     if request.post? and @employee.update_attributes(params[:employee])
       sms_setting = SmsSetting.new()
       if sms_setting.application_sms_active and sms_setting.employee_sms_active
@@ -404,7 +404,7 @@ class EmployeeController < ApplicationController
   
   def edit2
     @employee = Employee.find(params[:id])
-    @countries = Country.find(:all)
+    @countries = Country.all
     if request.post? and @employee.update_attributes(params[:employee])
       flash[:notice] = "#{t('flash21')} #{ @employee.first_name}"
       redirect_to :action => "profile", :id => @employee.id
@@ -423,7 +423,7 @@ class EmployeeController < ApplicationController
 
   def admission3
     @employee = Employee.find(params[:id])
-    @bank_fields = BankField.find(:all, :conditions=>"status = true")
+    @bank_fields = BankField.where(:status => true)
     if @bank_fields.empty?
       redirect_to :action => "admission3_1", :id => @employee.id
     end
@@ -439,7 +439,7 @@ class EmployeeController < ApplicationController
   
   def edit3
     @employee = Employee.find(params[:id])
-    @bank_fields = BankField.find(:all, :conditions=>"status = true")
+    @bank_fields = BankField.where(:status => true)
     if @bank_fields.empty?
       flash[:notice] = "#{t('flash36')}"
       redirect_to :action => "profile", :id => @employee.id
@@ -477,14 +477,14 @@ class EmployeeController < ApplicationController
 
   def admission3_1
     @employee = Employee.find(params[:id])
-    @employee_additional_details = EmployeeAdditionalDetail.find_all_by_employee_id(@employee.id)
-    @additional_fields = AdditionalField.find(:all, :conditions=> "status = true", :order=>"priority ASC")
+    @employee_additional_details = EmployeeAdditionalDetail.where(:employee_id =>@employee.id)
+    @additional_fields = AdditionalField.where(:status => true).order("priority ASC")
     if @additional_fields.empty?
       redirect_to :action => "edit_privilege", :id => @employee.employee_number
     end
     if request.post?
       @error=false
-      mandatory_fields = AdditionalField.find(:all, :conditions=>{:is_mandatory=>true, :status=>true})
+      mandatory_fields = AdditionalField.where(:is_mandatory=>true, :status=>true)
       mandatory_fields.each do|m|
         unless params[:employee_additional_details][m.id.to_s.to_sym].present?
           @employee.errors.add_to_base("#{m.name} must contain atleast one selected option.")
@@ -526,9 +526,9 @@ class EmployeeController < ApplicationController
   def edit_privilege
     @user = User.active.find_by_username(params[:id])
     @employee = @user.employee_record
-    @finance = Configuration.find_by_config_value("Finance")
+    @finance = Config.find_by_config_value("Finance")
     @sms_setting = SmsSetting.application_sms_status
-    @hr = Configuration.find_by_config_value("HR")
+    @hr = Config.find_by_config_value("HR")
     @privilege_tags=PrivilegeTag.find(:all,:order=>"priority ASC")
     @user_privileges=@user.privileges
     if request.post?
@@ -541,7 +541,7 @@ class EmployeeController < ApplicationController
   
   def edit3_1
     @employee = Employee.find(params[:id])
-    @additional_fields = AdditionalField.find(:all, :conditions=>"status = true")
+    @additional_fields = AdditionalField.where(:status => true)
     if @additional_fields.empty?
       flash[:notice] = "#{t('flash37')}"
       redirect_to :action => "profile", :id => @employee.id
@@ -562,10 +562,10 @@ class EmployeeController < ApplicationController
   end
 
   def admission4
-    @departments = EmployeeDepartment.find(:all)
-    @categories  = EmployeeCategory.find(:all)
-    @positions   = EmployeePosition.find(:all)
-    @grades      = EmployeeGrade.find(:all)
+    @departments = EmployeeDepartment.all
+    @categories  = EmployeeCategory.all
+    @positions   = EmployeePosition.all
+    @grades      = EmployeeGrade.all
     if request.post?
       @employee = Employee.find(params[:id])
       Employee.update(@employee, :reporting_manager_id => params[:employee][:reporting_manager_id])
@@ -582,10 +582,10 @@ class EmployeeController < ApplicationController
   end
 
   def change_reporting_manager
-    @departments = EmployeeDepartment.find(:all)
-    @categories  = EmployeeCategory.find(:all)
-    @positions   = EmployeePosition.find(:all)
-    @grades      = EmployeeGrade.find(:all)
+    @departments = EmployeeDepartment.all
+    @categories  = EmployeeCategory.all
+    @positions   = EmployeePosition.all
+    @grades      = EmployeeGrade.all
     @emp = Employee.find(params[:id])
     @reporting_manager = Employee.find(@emp.reporting_manager_id).first_name unless @emp.reporting_manager_id.nil?
     if request.post?
@@ -615,16 +615,12 @@ class EmployeeController < ApplicationController
     other_conditions += " AND employee_position_id = '#{params[:employee_position_id]}'" unless params[:employee_position_id] == ""
     other_conditions += " AND employee_grade_id = '#{params[:employee_grade_id]}'" unless params[:employee_grade_id] == ""
     if params[:query].length>= 3
-      @employee = Employee.find(:all,
-        :conditions => ["(first_name LIKE ? OR middle_name LIKE ? OR last_name LIKE ?
+      @employee = Employee.where(["(first_name LIKE ? OR middle_name LIKE ? OR last_name LIKE ?
                        OR employee_number = ? OR (concat(first_name, \" \", last_name) LIKE ? ))"+ other_conditions,
           "#{params[:query]}%","#{params[:query]}%","#{params[:query]}%",
-          "#{params[:query]}", "#{params[:query]}" ],
-        :order => "employee_department_id asc,first_name asc",:include=>"employee_department") unless params[:query] == ''
+          "#{params[:query]}", "#{params[:query]}" ]).order("employee_department_id asc,first_name asc").includes("employee_department") unless params[:query] == ''
     else
-      @employee = Employee.find(:all,
-        :conditions => ["(employee_number = ? )"+ other_conditions, "#{params[:query]}"],
-        :order => "employee_department_id asc,first_name asc",:include=>"employee_department") unless params[:query] == ''
+      @employee = Employee.where(["(employee_number = ? )"+ other_conditions, "#{params[:query]}"]).order("employee_department_id asc,first_name asc").includes("employee_department") unless params[:query] == ''
     end
     render :layout => false
   end
@@ -636,16 +632,12 @@ class EmployeeController < ApplicationController
     other_conditions += " AND employee_position_id = '#{params[:employee_position_id]}'" unless params[:employee_position_id] == ""
     other_conditions += " AND employee_grade_id = '#{params[:employee_grade_id]}'" unless params[:employee_grade_id] == ""
     if params[:query].length>= 3
-      @employee = Employee.find(:all,
-        :conditions => ["(first_name LIKE ? OR middle_name LIKE ? OR last_name LIKE ?
+      @employee = Employee.where(["(first_name LIKE ? OR middle_name LIKE ? OR last_name LIKE ?
                        OR employee_number = ? OR (concat(first_name, \" \", last_name) LIKE ? ))"+ other_conditions,
           "#{params[:query]}%","#{params[:query]}%","#{params[:query]}%",
-          "#{params[:query]}", "#{params[:query]}" ],
-        :order => "employee_department_id asc,first_name asc") unless params[:query] == ''
+          "#{params[:query]}", "#{params[:query]}" ]).order("employee_department_id asc,first_name asc") unless params[:query] == ''
     else
-      @employee = Employee.find(:all,
-        :conditions => ["employee_number = ? "+ other_conditions, "#{params[:query]}%"],
-        :order => "employee_department_id asc,first_name asc") unless params[:query] == ''
+      @employee = Employee.where(["employee_number = ? "+ other_conditions, "#{params[:query]}%"]).order("employee_department_id asc,first_name asc") unless params[:query] == ''
     end
     render :layout => false
   end
@@ -654,7 +646,7 @@ class EmployeeController < ApplicationController
 
     @current_user = current_user
     @employee = Employee.find(params[:id])
-    @new_reminder_count = Reminder.find_all_by_recipient(@current_user.id, :conditions=>"is_read = false")
+    @new_reminder_count = Reminder.where("recipient = ? AND is_read = false",@current_user.id)
     @gender = "Male"
     @gender = "Female" if @employee.gender == "f"
     @status = "Active"
@@ -720,21 +712,21 @@ class EmployeeController < ApplicationController
 
   def profile_bank_details
     @employee = Employee.find(params[:id])
-    @bank_details = EmployeeBankDetail.find_all_by_employee_id(@employee.id)
+    @bank_details = EmployeeBankDetail.where(:employee_id => @employee.id)
     render :partial => "bank_details"
   end
 
   def profile_additional_details
     @employee = Employee.find(params[:id])
-    @additional_details = EmployeeAdditionalDetail.find_all_by_employee_id(@employee.id)
+    @additional_details = EmployeeAdditionalDetail.where(:employee_id => @employee.id)
     render :partial => "additional_details"
   end
 
 
   def profile_payroll_details
-    @currency_type = Configuration.find_by_config_key("CurrencyType").config_value
+    @currency_type = Config.find_by_config_key("CurrencyType").config_value
     @employee = Employee.find(params[:id])
-    @payroll_details = EmployeeSalaryStructure.find_all_by_employee_id(@employee, :order=>"payroll_category_id ASC")
+    @payroll_details = EmployeeSalaryStructure.where(:employee_id => @employee).order("payroll_category_id ASC")
     render :partial => "payroll_details"
   end
 
@@ -761,8 +753,8 @@ class EmployeeController < ApplicationController
     @total_months = month
     @home_country = Country.find(@employee.home_country_id).name unless @employee.home_country_id.nil?
     @office_country = Country.find(@employee.office_country_id).name unless @employee.office_country_id.nil?
-    @bank_details = EmployeeBankDetail.find_all_by_employee_id(@employee.id)
-    @additional_details = EmployeeAdditionalDetail.find_all_by_employee_id(@employee.id)
+    @bank_details = EmployeeBankDetail.where(:employee_id => @employee.id)
+    @additional_details = EmployeeAdditionalDetail.where(:employee_id => @employee.id)
     render :pdf => 'profile_pdf'
           
             
@@ -777,7 +769,7 @@ class EmployeeController < ApplicationController
 
   def employees_list
     department_id = params[:department_id]
-    @employees = Employee.find_all_by_employee_department_id(department_id,:order=>'first_name ASC')
+    @employees = Employee.where(:employee_department_id => department_id).order('first_name ASC')
 
     render :update do |page|
       page.replace_html 'employee_list', :partial => 'employee_view_all_list', :object => @employees
@@ -786,6 +778,7 @@ class EmployeeController < ApplicationController
 
   def show
     @employee = Employee.find(params[:id])
+    #TODO see below
     send_data(@employee.photo_data, :type => @employee.photo_content_type, :filename => @employee.photo_filename, :disposition => 'inline')
   end
 
@@ -812,8 +805,8 @@ class EmployeeController < ApplicationController
         IndividualPayslipCategory.update(@created_category.id, :include_every_month=>params[:include_every_month])
       end
 
-      @new_payslip_category = IndividualPayslipCategory.find_all_by_employee_id_and_salary_date(@employee.id,nil)
-      @individual = IndividualPayslipCategory.find_all_by_employee_id_and_salary_date(@employee.id,@salary_date)
+      @new_payslip_category = IndividualPayslipCategory.where("employee_id = ? AND salary_date = ? ",@employee.id,nil)
+      @individual = IndividualPayslipCategory.where("employee_id = ? AND salary_date = ? ",@employee.id,@salary_date) #TODO .first
       render :partial => "payslip_category_list",:locals => {:emp_id => @employee.id, :salary_date=>@salary_date}
     else
       render :partial => "payslip_category_form"
@@ -825,8 +818,8 @@ class EmployeeController < ApplicationController
     employee = removal_category.employee_id
     @salary_date = params[:id3]
     removal_category.destroy
-    @new_payslip_category = IndividualPayslipCategory.find_all_by_employee_id_and_salary_date(employee,nil)
-    @individual = IndividualPayslipCategory.find_all_by_employee_id_and_salary_date(employee,@salary_date, :conditions=>"") unless params[:id3]==''
+    @new_payslip_category = IndividualPayslipCategory.where("employee_id = ? AND salary_date = ?",@employee,nil)
+    @individual = IndividualPayslipCategory.where("employee_id = ?  AND salary_date = ?",@employee,@salary_date) unless params[:id3]==''
     @individual ||= []
     render :partial => "list_payslip_category"
   end
@@ -835,19 +828,18 @@ class EmployeeController < ApplicationController
     @new_payslip_category == []
     @salary_date = ''
     @employee = Employee.find(params[:id])
-    @independent_categories = PayrollCategory.find_all_by_payroll_category_id_and_status(nil, true)
-    @dependent_categories = PayrollCategory.find_all_by_status(true, :conditions=>"payroll_category_id != \'\'")
-    @employee_additional_categories = IndividualPayslipCategory.find_all_by_employee_id(@employee.id, :conditions=>"include_every_month = true")
-    @new_payslip_category = IndividualPayslipCategory.find_all_by_employee_id_and_salary_date(@employee.id,nil)
-    @individual = IndividualPayslipCategory.find_all_by_employee_id_and_salary_date(@employee.id,Date.today)
+    @independent_categories = PayrollCategory.where("payroll_category_id = ? AND status = ?",nil, true)
+    @dependent_categories = PayrollCategory.where("status ? AND payroll_category_id != \'\'",true)
+    @employee_additional_categories = IndividualPayslipCategory.where("employee_id = ? AND include_every_month = true",@employee.id)
+    @new_payslip_category = IndividualPayslipCategory.where("employee_id = ? AND salary_date = ?",@employee.id,nil)
+    @individual = IndividualPayslipCategory.where("employee_id = ? AND salary_date =?",@employee.id,Date.today)
     @user = current_user
     if request.post?
       salary_date = Date.parse(params[:salary_date])
       unless salary_date.to_date < @employee.joining_date.to_date
         start_date = salary_date - ((salary_date.day - 1).days)
         end_date = start_date + 1.month
-        payslip_exists = MonthlyPayslip.find_all_by_employee_id(@employee.id,
-          :conditions => ["salary_date >= ? and salary_date < ?", start_date, end_date])
+        payslip_exists = MonthlyPayslip.where("employee_id = ? AND salary_date >= ? and salary_date < ?",@employee.id, start_date, end_date)
         if payslip_exists == []
           params[:manage_payroll].each_pair do |k, v|
             row_id = EmployeeSalaryStructure.find_by_employee_id_and_payroll_category_id(@employee, k)
@@ -860,13 +852,13 @@ class EmployeeController < ApplicationController
                 :payroll_category_id => k,:amount => v['amount'])
             end
           end
-          individual_payslip_category = IndividualPayslipCategory.find_all_by_employee_id_and_salary_date(@employee.id,nil)
+          individual_payslip_category = IndividualPayslipCategory.where("employee_id = ? AND salary_date = ?",@employee.id,nil)
           individual_payslip_category.each do |c|
             IndividualPayslipCategory.update(c.id, :salary_date=>start_date)
           end
           flash[:notice] = "#{@employee.first_name} #{t('flash27')} #{params[:salary_date]}"
         else #else for if payslip_exists == []
-          individual_payslips_generated = IndividualPayslipCategory.find_all_by_employee_id_and_salary_date(@employee.id,nil)
+          individual_payslips_generated = IndividualPayslipCategory.where("employee_id = ? AND salary_date = ?",@employee.id,nil)
           unless individual_payslips_generated.nil?
             individual_payslips_generated.each do|i|
               i.delete
@@ -892,12 +884,12 @@ class EmployeeController < ApplicationController
 
   def view_payslip
     @employee = Employee.find(params[:id])
-    @salary_dates = MonthlyPayslip.find_all_by_employee_id(params[:id], :conditions=>"is_approved = true",:select => "distinct salary_date")
+    @salary_dates = MonthlyPayslip.select("salary_date").where("employee_id = ? AND is_approved = true",params[:id]).distinct
     render :partial => "select_dates"
   end
 
   def update_monthly_payslip
-    @currency_type = Configuration.find_by_config_key("CurrencyType").config_value
+    @currency_type = Config.find_by_config_key("CurrencyType").config_value
     @salary_date = params[:salary_date]
     if params[:salary_date] == ""
       render :update do |page|
@@ -905,13 +897,8 @@ class EmployeeController < ApplicationController
       end
       return
     end
-    @monthly_payslips = MonthlyPayslip.find_all_by_salary_date(params[:salary_date],
-      :conditions=> "employee_id =#{params[:emp_id]}",
-      :order=> "payroll_category_id ASC")
-
-    @individual_payslip_category = IndividualPayslipCategory.find_all_by_salary_date(params[:salary_date],
-      :conditions=>"employee_id =#{params[:emp_id]}",
-      :order=>"id ASC")
+    @monthly_payslips = MonthlyPayslip.where("salary_date = ? AND employee_id = ?",params[:salary_date],params[:emp_id]).order("payroll_category_id ASC")
+    @individual_payslip_category = IndividualPayslipCategory.where("salary_date = ? AND employee_id = ? ",params[:salary_date],params[:emp_id]).order("id ASC")
     @individual_category_non_deductionable = 0
     @individual_category_deductionable = 0
     @individual_payslip_category.each do |pc|
@@ -952,11 +939,11 @@ class EmployeeController < ApplicationController
   end
 
   def delete_payslip
-    @individual_payslip_category=IndividualPayslipCategory.find_all_by_employee_id_and_salary_date(params[:id],params[:id2])
+    @individual_payslip_category=IndividualPayslipCategory.where("employee_id = ? AND salary_date = ?",params[:id],params[:id2])
     @individual_payslip_category.each do |pc|
       pc.destroy
     end
-    @monthly_payslip = MonthlyPayslip.find_all_by_employee_id_and_salary_date(params[:id], params[:id2])
+    @monthly_payslip = MonthlyPayslip.where("employee_id = ? AND salary_date = ? ",params[:id], params[:id2])
     @monthly_payslip.each do |m|
       m.destroy
     end
@@ -966,12 +953,12 @@ class EmployeeController < ApplicationController
 
   def view_attendance
     @employee = Employee.find(params[:id])
-    @attendance_report = EmployeeAttendance.find_all_by_employee_id(@employee.id)
-    @leave_types = EmployeeLeaveType.find(:all, :conditions => "status = true")
-    @leave_count = EmployeeLeave.find_all_by_employee_id(@employee,:joins=>:employee_leave_type,:conditions=>"status = true")
+    @attendance_report = EmployeeAttendance.where(:employee_id => @employee.id)
+    @leave_types = EmployeeLeaveType.where(:status => true)
+    @leave_count = EmployeeLeave.joins(:employee_leave_type).where("employee_id = ? AND employee_leave_types.status = true", @employee)
     @total_leaves = 0
     @leave_types.each do |lt|
-      leave_count = EmployeeAttendance.find_all_by_employee_id_and_employee_leave_type_id(@employee.id,lt.id).size
+      leave_count = EmployeeAttendance.where("employee_id = ? AND employee_leave_type_id = ?",@employee.id,lt.id).size
       @total_leaves = @total_leaves + leave_count
     end
     render :partial => "attendance_report"
@@ -991,12 +978,12 @@ class EmployeeController < ApplicationController
     leave = EmployeeLeave.find_by_id(params[:id])
     leave.update_attributes(:leave_count => available_leave.to_f)
     @employee = Employee.find(leave.employee_id)
-    @attendance_report = EmployeeAttendance.find_all_by_employee_id(@employee.id)
-    @leave_types = EmployeeLeaveType.find(:all, :conditions => "status = true")
-    @leave_count = EmployeeLeave.find_all_by_employee_id(@employee)
+    @attendance_report = EmployeeAttendance.where(:employee_id => @employee.id)
+    @leave_types = EmployeeLeaveType.where("status = true")
+    @leave_count = EmployeeLeave.where(:employee_id => @employee)
     @total_leaves = 0
     @leave_types.each do |lt|
-      leave_count = EmployeeAttendance.find_all_by_employee_id_and_employee_leave_type_id(@employee.id,lt.id).size
+      leave_count = EmployeeAttendance.where("employee_id = ? AND employee_leave_type_id = ?",@employee.id,lt.id).size
       @total_leaves = @total_leaves + leave_count
     end
     render :update do |page|
@@ -1011,7 +998,7 @@ class EmployeeController < ApplicationController
 
   def update_subjects
     batch = Batch.find(params[:batch_id])
-    @subjects = Subject.find_all_by_batch_id(batch.id,:conditions=>"is_deleted=false")
+    @subjects = Subject.where("batch_id = ? AND is_deleted = false",batch.id)
 
     render :update do |page|
       page.replace_html 'subjects1', :partial => 'subjects', :object => @subjects
@@ -1020,8 +1007,8 @@ class EmployeeController < ApplicationController
 
   def select_department
     @subject = Subject.find(params[:subject_id])
-    @assigned_employee = EmployeesSubject.find_all_by_subject_id(@subject.id)
-    @departments = EmployeeDepartment.find(:all, :conditions =>{:status=>true})
+    @assigned_employee = EmployeesSubject.where(:subject_id => @subject.id)
+    @departments = EmployeeDepartment.where(:status=>true)
     render :update do |page|
       page.replace_html 'department-select', :partial => 'select_department'
     end
@@ -1029,31 +1016,31 @@ class EmployeeController < ApplicationController
 
   def update_employees
     @subject = Subject.find(params[:subject_id])
-    @employees = Employee.find_all_by_employee_department_id(params[:department_id], :conditions =>{:status=>true})
+    @employees = Employee.where("employee_department_id = ? AND status =?",params[:department_id],true)
     render :update do |page|
       page.replace_html 'employee-list', :partial => 'employee_list'
     end
   end
 
   def assign_employee
-    @departments = EmployeeDepartment.find(:all,:conditions =>{:status=>true})
+    @departments = EmployeeDepartment.where(:status=>true)
     @subject = Subject.find(params[:id1])
-    @employees = Employee.find_all_by_employee_department_id(Employee.find(params[:id]).employee_department_id)
+    @employees = Employee.where(:employee_department_id => Employee.find(params[:id]).employee_department_id)
     EmployeesSubject.create(:employee_id => params[:id], :subject_id => params[:id1])
-    @assigned_employee = EmployeesSubject.find_all_by_subject_id(@subject.id)
+    @assigned_employee = EmployeesSubject.where(:subject_id => @subject.id)
     render :partial =>"select_department"
   end
 
   def remove_employee
-    @departments = EmployeeDepartment.find(:all,:conditions =>{:status=>true})
+    @departments = EmployeeDepartment.where(:status=>true)
     @subject = Subject.find(params[:id1])
-    @employees = Employee.find_all_by_employee_department_id(Employee.find(params[:id]).employee_department_id)
-    if TimetableEntry.find_all_by_subject_id_and_employee_id(@subject.id,params[:id]).blank?
+    @employees = Employee.where(:employee_department_id => Employee.find(params[:id]).employee_department_id)
+    if TimetableEntry.where("subject_id = ? AND employee_id =?",@subject.id,params[:id]).blank?
       EmployeesSubject.find_by_employee_id_and_subject_id(params[:id], params[:id1]).destroy
     else
       flash.now[:warn_notice]="<p>#{t('employee.flash41')}</p> <p>#{t('employee.flash42')}</p> "
     end
-    @assigned_employee = EmployeesSubject.find_all_by_subject_id(@subject.id)
+    @assigned_employee = EmployeesSubject.where(:subject_id => @subject.id)
     render :partial =>"select_department"
   end
 
@@ -1114,7 +1101,8 @@ class EmployeeController < ApplicationController
   def update_rejected_employee_list
     department_id = params[:department_id]
     #@employees = Employee.find_all_by_employee_department_id(department_id)
-    @employees = MonthlyPayslip.find(:all, :conditions =>"is_rejected is true", :group=>'employee_id', :joins=>"INNER JOIN employees on monthly_payslips.employee_id = employees.id")
+    #TODO see below @employees = MonthlyPayslip.find(:all, :conditions =>"is_rejected is true", :group=>'employee_id', :joins=>"INNER JOIN employees on monthly_payslips.employee_id = employees.id")
+    @employees = MonthlyPayslip.joins(:employee).where("monthly_payslips.is_rejected =true").group('employee_id,id')
     @employees.reject!{|x| x.employee.employee_department_id != department_id.to_i}
 
     render :update do |page|
