@@ -17,9 +17,9 @@
 #limitations under the License.
 
 class BatchesController < ApplicationController
-  before_filter :init_data,:except=>[:assign_tutor,:update_employees,:assign_employee,:remove_employee,:batches_ajax]
+  before_action :init_data,:except=>[:assign_tutor,:update_employees,:assign_employee,:remove_employee,:batches_ajax]
   filter_access_to :all
-  before_filter :login_required
+  before_action :login_required
   def index
     @batches = @course.batches    
   end
@@ -37,9 +37,9 @@ class BatchesController < ApplicationController
         msg = []
         msg << "<ol>"
         course_id = @batch.course_id
-        @previous_batch = Batch.find(:first,:order=>'id desc', :conditions=>"batches.id < '#{@batch.id }' AND batches.is_deleted = 0 AND course_id = ' #{course_id }'",:joins=>"INNER JOIN subjects ON subjects.batch_id = batches.id  AND subjects.is_deleted = 0")
+        @previous_batch = Batch.where("batches.id < ? AND batches.is_deleted = 0 AND course_id = ?",@batch.id,course_id ).joins("INNER JOIN subjects ON subjects.batch_id = batches.id  AND subjects.is_deleted = 0").order('id desc').first
         unless @previous_batch.blank?
-          subjects = Subject.find_all_by_batch_id(@previous_batch.id,:conditions=>'is_deleted=false')
+          subjects = Subject.where("batch_id = ? AND is_deleted = false",@previous_batch.id)
           subjects.each do |subject|
             if subject.elective_group_id.nil?
               Subject.create(:name=>subject.name,:code=>subject.code,:batch_id=>@batch.id,:no_exams=>subject.no_exams,
@@ -70,15 +70,15 @@ class BatchesController < ApplicationController
       unless params[:import_fees].nil?
         fee_msg = []
         course_id = @batch.course_id
-        @previous_batch = Batch.find(:first,:order=>'id desc', :conditions=>"batches.id < '#{@batch.id }' AND batches.is_deleted = 0 AND course_id = ' #{course_id }'",:joins=>"INNER JOIN finance_fee_categories ON finance_fee_categories.batch_id = batches.id  AND finance_fee_categories.is_deleted = 0 AND is_master= 1")
+        @previous_batch = Batch.where("batches.id < ? AND batches.is_deleted = 0 AND course_id = ?",@batch.id,course_id).joins("INNER JOIN finance_fee_categories ON finance_fee_categories.batch_id = batches.id  AND finance_fee_categories.is_deleted = 0 AND is_master= 1").order('id desc').first
         unless @previous_batch.blank?
           fee_msg << "<ol>"
-          categories = FinanceFeeCategory.find_all_by_batch_id(@previous_batch.id,:conditions=>'is_deleted=false and is_master=true')
+          categories = FinanceFeeCategory.where("batch_id = ?  AND is_deleted = false AND is_master = true",@previous_batch.id)
           categories.each do |c|
-            particulars = c.fee_particulars.all(:conditions=>"admission_no IS NULL AND student_id IS NULL AND is_deleted = 0")
+            particulars = c.fee_particulars.where("admission_no IS NULL AND student_id IS NULL AND is_deleted = 0")
             particulars.reject!{|pt|pt.deleted_category}
-            batch_discounts = BatchFeeDiscount.find_all_by_finance_fee_category_id(c.id)
-            category_discounts = StudentCategoryFeeDiscount.find_all_by_finance_fee_category_id(c.id)
+            batch_discounts = BatchFeeDiscount.where("finance_fee_category_id = ?",c.id)
+            category_discounts = StudentCategoryFeeDiscount.where("finance_fee_category_id = ?",c.id)
             unless particulars.blank? and batch_discounts.blank? and category_discounts.blank?
               new_category = FinanceFeeCategory.new(:name=>c.name,:description=>c.description,:batch_id=>@batch.id,:is_deleted=>false,:is_master=>true)
               if new_category.save
@@ -130,11 +130,11 @@ class BatchesController < ApplicationController
       redirect_to [@course, @batch]
     else
       @grade_types=[]
-      gpa = Configuration.find_by_config_key("GPA").config_value
+      gpa = Config.find_by_config_key("GPA").config_value
       if gpa == "1"
         @grade_types << "GPA"
       end
-      cwa = Configuration.find_by_config_key("CWA").config_value
+      cwa = Config.find_by_config_key("CWA").config_value
       if cwa == "1"
         @grade_types << "CWA"
       end
@@ -174,11 +174,11 @@ class BatchesController < ApplicationController
   def assign_tutor
     @batch = Batch.find_by_id(params[:id])
     @assigned_employee = @batch.employee_id.split(",") unless @batch.employee_id.nil?
-    @departments = EmployeeDepartment.find(:all)
+    @departments = EmployeeDepartment.all
   end
 
   def update_employees
-    @employees = Employee.find_all_by_employee_department_id(params[:department_id])
+    @employees = Employee.where("employee_department_id = ?",params[:department_id])
     @batch = Batch.find_by_id(params[:batch_id])
     render :update do |page|
       page.replace_html 'employee-list', :partial => 'employee_list'
@@ -187,7 +187,7 @@ class BatchesController < ApplicationController
 
   def assign_employee
     @batch = Batch.find_by_id(params[:batch_id])
-    @employees = Employee.find_all_by_employee_department_id(params[:department_id])
+    @employees = Employee.where("employee_department_id = ?",params[:department_id])
     unless @batch.employee_id.blank?
       @assigned_emps = @batch.employee_id.split(',')
     else
@@ -204,7 +204,7 @@ class BatchesController < ApplicationController
 
   def remove_employee
     @batch = Batch.find_by_id(params[:batch_id])
-    @employees = Employee.find_all_by_employee_department_id(params[:department_id])
+    @employees = Employee.where("employee_department_id =?",params[:department_id])
     @assigned_emps = @batch.employee_id.split(',')
     @removed_emps = @assigned_emps.delete(params[:id].to_s)
     @assigned_emps = @assigned_emps.join(",")
@@ -226,7 +226,7 @@ class BatchesController < ApplicationController
   end
   private
   def init_data
-    @batch = Batch.find params[:id] if ['show', 'edit', 'update', 'destroy'].include? action_name
+    @batch = Batch.find(params[:id]) if ['show', 'edit', 'update', 'destroy'].include? action_name
     @course = Course.find params[:course_id]
   end
 end
