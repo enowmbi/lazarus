@@ -17,10 +17,10 @@
 #limitations under the License.
 
 class AttendanceReportsController < ApplicationController
-  before_filter :login_required
+  before_action :login_required
   filter_access_to :all
-  before_filter :only_assigned_employee_allowed
-  before_filter :default_time_zone_present_time
+  before_action :only_assigned_employee_allowed
+  before_action :default_time_zone_present_time
 
 
   def index
@@ -29,11 +29,11 @@ class AttendanceReportsController < ApplicationController
     elsif @current_user.privileges.map{|p| p.name}.include?('StudentAttendanceView')
       @batches = Batch.active
     elsif @current_user.employee?
-      @batches=Batch.find_all_by_employee_id @current_user.employee_record.id
+      @batches=Batch.where("employee_id = ?", @current_user.employee_record.id)
       @batches+=@current_user.employee_record.subjects.collect{|b| b.batch}
       @batches=@batches.uniq unless @batches.empty?
     end
-    @config = Configuration.find_by_config_key('StudentAttendanceType')
+    @config = Config.find_by_config_key('StudentAttendanceType')
   end
 
   def subject
@@ -42,16 +42,17 @@ class AttendanceReportsController < ApplicationController
     if @current_user.employee? and @allow_access ==true
       role_symb = @current_user.role_symbols
       if role_symb.include?(:student_attendance_view) or role_symb.include?(:student_attendance_register)
-        @subjects= Subject.find(:all,:conditions=>"batch_id = '#{@batch.id}' ")
+        @subjects= Subject.where("batch_id = ?",@batch.id)
       else
         if @batch.employee_id.to_i==@current_user.employee_record.id
           @subjects= @batch.subjects
         else
-          @subjects= Subject.find(:all,:joins=>"INNER JOIN employees_subjects ON employees_subjects.subject_id = subjects.id AND employee_id = #{@current_user.employee_record.id} AND batch_id = #{@batch.id} ")
+          # TODO @subjects= Subject.find(:all,:joins=>"INNER JOIN employees_subjects ON employees_subjects.subject_id = subjects.id AND employee_id = #{@current_user.employee_record.id} AND batch_id = #{@batch.id} ")
+          @subjects= Subject.joins(:employees_subjects).where("employee_id = ? AND batch_id = ? ",@current_user.employee_record.id,@batch.id)
         end
       end
     else
-      @subjects = Subject.find_all_by_batch_id(@batch.id,:conditions=>'is_deleted = false')
+      @subjects = Subject.where("batch_id = ? AND is_deleted = false",@batch.id)
     end
 
     render :update do |page|
@@ -61,7 +62,7 @@ class AttendanceReportsController < ApplicationController
 
   def mode
     @batch = Batch.find params[:batch_id]
-    @config = Configuration.find_by_config_key('StudentAttendanceType')
+    @config = Config.find_by_config_key('StudentAttendanceType')
     if @config.config_value == 'Daily'
       unless params[:subject_id] == ''
         @subject = params[:subject_id]
@@ -97,7 +98,7 @@ class AttendanceReportsController < ApplicationController
     @end_date = @local_tzone_time.to_date
     @leaves=Hash.new { |h, k| h[k] = Hash.new(&h.default_proc) }
     @mode = params[:mode]
-    @config = Configuration.find_by_config_key('StudentAttendanceType')
+    @config = Config.find_by_config_key('StudentAttendanceType')
     unless @config.config_value == 'Daily'
       if @mode == 'Overall'
         #        @academic_days=@batch.academic_days.count
@@ -110,9 +111,9 @@ class AttendanceReportsController < ApplicationController
           #          @academic_days=Timetable.tte_for_range(@batch,@start_date,@subject)
           @academic_days=@batch.subject_hours(@start_date, @end_date, params[:subject_id]).values.flatten.compact.count
           @subject = Subject.find params[:subject_id]
-          @report = SubjectLeave.count(:conditions=>{:subject_id=>@subject.id,:batch_id=>@batch.id, :month_date => @start_date..@end_date})
+          @report = SubjectLeave.where(:subject_id=>@subject.id,:batch_id=>@batch.id, :month_date => @start_date..@end_date).count
           ##          @grouped = SubjectLeave.find_all_by_subject_id(@subject.id,  :conditions =>{:month_date => @start_date..@end_date}).group_by(&:student_id)
-          @grouped = SubjectLeave.count(:conditions=>{:subject_id=>params[:subject_id],:batch_id=>@batch.id,:month_date => @start_date..@end_date},:group=>:student_id)
+          @grouped = SubjectLeave.where(:subject_id=>params[:subject_id],:batch_id=>@batch.id,:month_date => @start_date..@end_date).group(:student_id).count
           @batch.students.by_first_name.each do |s|
             if @grouped[s.id].nil?
               @leaves[s.id]['leave']=0
@@ -124,8 +125,8 @@ class AttendanceReportsController < ApplicationController
           end
         else
           @academic_days=@batch.subject_hours(@start_date, @end_date, 0).values.flatten.compact.count
-          @report = @batch.subject_leaves.find(:all,:conditions =>{:batch_id=>@batch.id,:month_date => @start_date..@end_date})
-          @grouped = @batch.subject_leaves(:all,  :conditions =>{:batch_id=>@batch.id,:month_date => @start_date..@end_date}).group_by(&:student_id)
+          @report = @batch.subject_leaves.where(:batch_id=>@batch.id,:month_date => @start_date..@end_date)
+          @grouped = @batch.subject_leaves.where(:batch_id=>@batch.id,:month_date => @start_date..@end_date).group_by(&:student_id)
           @batch.students.each do |s|
             if @grouped[s.id].nil?
               @leaves[s.id]['leave']=0
@@ -153,9 +154,9 @@ class AttendanceReportsController < ApplicationController
       if @mode == 'Overall'
         @academic_days=@batch.academic_days.count
         @students = @batch.students.by_first_name
-        leaves_forenoon=Attendance.count(:all,:conditions=>{:batch_id=>@batch.id,:forenoon=>true,:afternoon=>false,:month_date => @start_date..@end_date},:group=>:student_id)
-        leaves_afternoon=Attendance.count(:all,:conditions=>{:batch_id=>@batch.id,:forenoon=>false,:afternoon=>true,:month_date => @start_date..@end_date},:group=>:student_id)
-        leaves_full=Attendance.count(:all,:conditions=>{:batch_id=>@batch.id,:forenoon=>true,:afternoon=>true,:month_date => @start_date..@end_date},:group=>:student_id)
+        leaves_forenoon=Attendance.where(:batch_id=>@batch.id,:forenoon=>true,:afternoon=>false,:month_date => @start_date..@end_date).group(:student_id).count
+        leaves_afternoon=Attendance.where(:batch_id=>@batch.id,:forenoon=>false,:afternoon=>true,:month_date => @start_date..@end_date).group(:student_id).count
+        leaves_full=Attendance.where(:batch_id=>@batch.id,:forenoon=>true,:afternoon=>true,:month_date => @start_date..@end_date).group(:student_id).count
         @students.each do |student|
           @leaves[student.id]['total']=@academic_days-leaves_full[student.id].to_f-(0.5*(leaves_forenoon[student.id].to_f+leaves_afternoon[student.id].to_f))
           @leaves[student.id]['percent'] = (@leaves[student.id]['total'].to_f/@academic_days)*100 unless @academic_days == 0
@@ -191,7 +192,7 @@ class AttendanceReportsController < ApplicationController
     @month = params[:month]
     @year = params[:year]
     @students = @batch.students.by_first_name
-    @config = Configuration.find_by_config_key('StudentAttendanceType')
+    @config = Config.find_by_config_key('StudentAttendanceType')
     #    @date = "01-#{@month}-#{@year}"
     @date = '01-'+@month+'-'+@year
     @start_date = @date.to_date
@@ -205,13 +206,13 @@ class AttendanceReportsController < ApplicationController
       end
       @academic_days=  working_days.select{|v| v<=@end_date}.count
       if @config.config_value == 'Daily'
-        @report = @batch.attendances.find(:all,:conditions =>{:month_date => @start_date..@end_date})
+        @report = @batch.attendances.where(:month_date => @start_date..@end_date)
       else
         unless params[:subject_id] == '0'
           @subject = Subject.find params[:subject_id]
-          @report = SubjectLeave.find_all_by_subject_id(@subject.id,  :conditions =>{:batch_id=>@batch.id,:month_date => @start_date..@end_date})
+          @report = SubjectLeave.where(:subject_id =>@subject.id,:batch_id=>@batch.id,:month_date => @start_date..@end_date)
         else
-          @report = @batch.subject_leaves.find(:all,:conditions =>{:batch_id=>@batch.id,:month_date => @start_date..@end_date})
+          @report = @batch.subject_leaves.where(:batch_id=>@batch.id,:month_date => @start_date..@end_date)
         end
       end
     else
@@ -227,7 +228,7 @@ class AttendanceReportsController < ApplicationController
     @month = params[:month]
     @year = params[:year]
     @students = @batch.students.by_first_name
-    @config = Configuration.find_by_config_key('StudentAttendanceType')
+    @config = Config.find_by_config_key('StudentAttendanceType')
     #    @date = "01-#{@month}-#{@year}"
     @date = '01-'+@month+'-'+@year
     @start_date = @date.to_date
@@ -248,9 +249,9 @@ class AttendanceReportsController < ApplicationController
         if @config.config_value == 'Daily'
           @academic_days=  working_days.select{|v| v<=@end_date}.count
           @students = @batch.students.by_first_name
-          leaves_forenoon=Attendance.count(:all,:joins=>:student,:conditions=>{:batch_id=>@batch.id,:forenoon=>true,:afternoon=>false,:month_date => @start_date..@end_date},:group=>:student_id)
-          leaves_afternoon=Attendance.count(:all,:joins=>:student,:conditions=>{:batch_id=>@batch.id,:forenoon=>false,:afternoon=>true,:month_date => @start_date..@end_date},:group=>:student_id)
-          leaves_full=Attendance.count(:all,:joins=>:student,:conditions=>{:batch_id=>@batch.id,:forenoon=>true,:afternoon=>true,:month_date => @start_date..@end_date},:group=>:student_id)
+          leaves_forenoon=Attendance.joins(:student).where(:batch_id=>@batch.id,:forenoon=>true,:afternoon=>false,:month_date => @start_date..@end_date).group(:student_id).count
+          leaves_afternoon=Attendance.joins(:student).where(:batch_id=>@batch.id,:forenoon=>false,:afternoon=>true,:month_date => @start_date..@end_date).group(:student_id).count
+          leaves_full=Attendance.joins(:student).where(:batch_id=>@batch.id,:forenoon=>true,:afternoon=>true,:month_date => @start_date..@end_date).group(:student_id).count
           @students.each do |student|
             @leaves[student.id]['total']=@academic_days-leaves_full[student.id].to_f-(0.5*(leaves_forenoon[student.id].to_f+leaves_afternoon[student.id].to_f))
             @leaves[student.id]['percent'] = (@leaves[student.id]['total'].to_f/@academic_days)*100 unless @academic_days == 0
@@ -262,8 +263,8 @@ class AttendanceReportsController < ApplicationController
               @students = @subject.students.by_first_name
             end
             @academic_days=@batch.subject_hours(@start_date, @end_date, params[:subject_id]).values.flatten.compact.count
-            @report = SubjectLeave.find_all_by_subject_id(@subject.id,  :conditions =>{:batch_id=>@batch.id,:month_date => @start_date..@end_date})
-            @grouped = SubjectLeave.find_all_by_subject_id(@subject.id,  :conditions =>{:batch_id=>@batch.id,:month_date => @start_date..@end_date}).group_by(&:student_id)
+            @report = SubjectLeave.where(:subject_id => @subject.id, :batch_id=>@batch.id,:month_date => @start_date..@end_date)
+            @grouped = SubjectLeave.where(:subject_id => @subject.id, :batch_id=>@batch.id,:month_date => @start_date..@end_date).group_by(&:student_id)
             @batch.students.by_first_name.each do |s|
               if @grouped[s.id].nil?
                 @leaves[s.id]['leave']=0
@@ -275,8 +276,8 @@ class AttendanceReportsController < ApplicationController
             end
           else
             @academic_days=@batch.subject_hours(@start_date, @end_date, 0).values.flatten.compact.count
-            @report = @batch.subject_leaves.find(:all,:conditions =>{:month_date => @start_date..@end_date})
-            @grouped = @batch.subject_leaves(:all,  :conditions =>{:month_date => @start_date..@end_date}).group_by(&:student_id)
+            @report = @batch.subject_leaves.where(:month_date => @start_date..@end_date)
+            @grouped = @batch.subject_leaves.where(:month_date => @start_date..@end_date).group_by(&:student_id)
             @batch.students.by_first_name.each do |s|
               if @grouped[s.id].nil?
                 @leaves[s.id]['leave']=0
@@ -300,17 +301,17 @@ class AttendanceReportsController < ApplicationController
   def student_details
     @student = Student.find params[:id]
     @batch = @student.batch
-    @config = Configuration.find_by_config_key('StudentAttendanceType')
+    @config = Config.find_by_config_key('StudentAttendanceType')
     if @config.config_value == 'Daily'
-      @report = Attendance.find(:all,:conditions=>{:student_id=>@student.id,:batch_id=>@batch.id})
+      @report = Attendance.where(:student_id=>@student.id,:batch_id=>@batch.id)
     else
-      @report = SubjectLeave.find(:all,:conditions=>{:student_id=>@student.id,:batch_id=>@batch.id})
+      @report = SubjectLeave.where(:student_id=>@student.id,:batch_id=>@batch.id)
       
     end
   end
 
   def filter
-    @config = Configuration.find_by_config_key('StudentAttendanceType')
+    @config = Config.find_by_config_key('StudentAttendanceType')
     @batch = Batch.find(params[:filter][:batch])
     @students = @batch.students.by_first_name
     @start_date = (params[:filter][:start_date]).to_date
@@ -328,8 +329,8 @@ class AttendanceReportsController < ApplicationController
           unless params[:filter][:subject] == '0'
             @subject = Subject.find params[:filter][:subject]
             @academic_days=@batch.subject_hours(@start_date, @end_date, params[:filter][:subject]).values.flatten.compact.count
-            @report = SubjectLeave.find_all_by_subject_id(@subject.id,  :conditions =>{:batch_id=>@batch.id,:month_date => @start_date..@end_date})
-            @grouped = SubjectLeave.find_all_by_subject_id(@subject.id,  :conditions =>{:batch_id=>@batch.id,:month_date => @start_date..@end_date}).group_by(&:student_id)
+            @report = SubjectLeave.where(:subject_id => @subject.id, :batch_id=>@batch.id,:month_date => @start_date..@end_date)
+            @grouped = SubjectLeave.where(:subject_id => @subject.id,  :batch_id=>@batch.id,:month_date => @start_date..@end_date).group_by(&:student_id)
             @batch.students.by_first_name.each do |s|
               if @grouped[s.id].nil?
                 @leaves[s.id]['leave']=0
@@ -341,8 +342,8 @@ class AttendanceReportsController < ApplicationController
             end
           else
             @academic_days=@batch.subject_hours(@start_date, @end_date, 0).values.flatten.compact.count
-            @report = @batch.subject_leaves.find(:all,:conditions =>{:month_date => @start_date..@end_date})
-            @grouped = @batch.subject_leaves(:all,  :conditions =>{:month_date => @start_date..@end_date}).group_by(&:student_id)
+            @report = @batch.subject_leaves.where(:month_date => @start_date..@end_date)
+            @grouped = @batch.subject_leaves.where(:month_date => @start_date..@end_date).group_by(&:student_id)
             @batch.students.by_first_name.each do |s|
               if @grouped[s.id].nil?
                 @leaves[s.id]['leave']=0
@@ -363,9 +364,9 @@ class AttendanceReportsController < ApplicationController
             @academic_days=  working_days.select{|v| v<=@end_date}.count
           end
           @students = @batch.students.by_first_name
-          leaves_forenoon=Attendance.count(:all,:conditions=>{:batch_id=>@batch.id,:forenoon=>true,:afternoon=>false,:month_date => @start_date..@end_date},:group=>:student_id)
-          leaves_afternoon=Attendance.count(:all,:conditions=>{:batch_id=>@batch.id,:forenoon=>false,:afternoon=>true,:month_date => @start_date..@end_date},:group=>:student_id)
-          leaves_full=Attendance.count(:all,:conditions=>{:batch_id=>@batch.id,:forenoon=>true,:afternoon=>true,:month_date => @start_date..@end_date},:group=>:student_id)
+          leaves_forenoon=Attendance.where(:batch_id=>@batch.id,:forenoon=>true,:afternoon=>false,:month_date => @start_date..@end_date).group(:student_id).count
+          leaves_afternoon=Attendance.where(:batch_id=>@batch.id,:forenoon=>false,:afternoon=>true,:month_date => @start_date..@end_date).group(:student_id).count
+          leaves_full=Attendance.where(:batch_id=>@batch.id,:forenoon=>true,:afternoon=>true,:month_date => @start_date..@end_date).group(:student_id).count
           @students.each do |student|
             @leaves[student.id]['total']=@academic_days-leaves_full[student.id].to_f-(0.5*(leaves_forenoon[student.id].to_f+leaves_afternoon[student.id].to_f))
             @leaves[student.id]['percent'] = (@leaves[student.id]['total'].to_f/@academic_days)*100 unless @academic_days == 0
@@ -378,7 +379,7 @@ class AttendanceReportsController < ApplicationController
   end
 
   def filter2
-    @config = Configuration.find_by_config_key('StudentAttendanceType')
+    @config = Config.find_by_config_key('StudentAttendanceType')
     @batch = Batch.find(params[:filter][:batch])
     @students = @batch.students.by_first_name
     @start_date = (params[:filter][:start_date]).to_date
@@ -391,12 +392,12 @@ class AttendanceReportsController < ApplicationController
           @subject = Subject.find params[:filter][:subject]
         end
         if params[:filter][:subject] == '0'
-          @report = @batch.subject_leaves.find(:all,:conditions =>{:month_date => @start_date..@end_date})
+          @report = @batch.subject_leaves.where(:month_date => @start_date..@end_date)
         else
-          @report = SubjectLeave.find_all_by_subject_id(@subject.id,  :conditions =>{:month_date => @start_date..@end_date})
+          @report = SubjectLeave.where(:subject_id => @subject.id, :month_date => @start_date..@end_date)
         end
       else
-        @report = @batch.attendances.find(:all,:conditions =>{:month_date => @start_date..@end_date})
+        @report = @batch.attendances.where(:month_date => @start_date..@end_date)
       end
     end
   end
@@ -406,7 +407,7 @@ class AttendanceReportsController < ApplicationController
   end
 
   def report_pdf
-    @config = Configuration.find_by_config_key('StudentAttendanceType')
+    @config = Config.find_by_config_key('StudentAttendanceType')
     @batch = Batch.find(params[:filter][:batch])
     @students = @batch.students.by_first_name
     @start_date = (params[:filter][:start_date]).to_date
@@ -422,7 +423,7 @@ class AttendanceReportsController < ApplicationController
         unless params[:filter][:subject] == '0'
           @subject = Subject.find params[:filter][:subject]
           @academic_days=@batch.subject_hours(@start_date, @end_date, params[:filter][:subject]).values.flatten.compact.count
-          @grouped = SubjectLeave.find_all_by_subject_id(@subject.id,  :conditions =>{:month_date => @start_date..@end_date}).group_by(&:student_id)
+          @grouped = SubjectLeave.where(:subject_id => @subject.id, :month_date => @start_date..@end_date).group_by(&:student_id)
           @batch.students.by_first_name.each do |s|
             if @grouped[s.id].nil?
               @leaves[s.id]['leave']=0
@@ -434,7 +435,7 @@ class AttendanceReportsController < ApplicationController
           end
         else
           @academic_days=@batch.subject_hours(@start_date, @end_date, 0).values.flatten.compact.count
-          @grouped = @batch.subject_leaves(:all,  :conditions =>{:month_date => @start_date..@end_date}).group_by(&:student_id)
+          @grouped = @batch.subject_leaves.where(:month_date => @start_date..@end_date).group_by(&:student_id)
           @batch.students.each do |s|
             if @grouped[s.id].nil?
               @leaves[s.id]['leave']=0
@@ -455,9 +456,9 @@ class AttendanceReportsController < ApplicationController
           @academic_days=  working_days.select{|v| v<=@end_date}.count
         end
         @students = @batch.students.by_first_name
-        leaves_forenoon=Attendance.count(:all,:conditions=>{:batch_id=>@batch.id,:forenoon=>true,:afternoon=>false,:month_date => @start_date..@end_date},:group=>:student_id)
-        leaves_afternoon=Attendance.count(:all,:conditions=>{:batch_id=>@batch.id,:forenoon=>false,:afternoon=>true,:month_date => @start_date..@end_date},:group=>:student_id)
-        leaves_full=Attendance.count(:all,:conditions=>{:batch_id=>@batch.id,:forenoon=>true,:afternoon=>true,:month_date => @start_date..@end_date},:group=>:student_id)
+        leaves_forenoon=Attendance.where(:batch_id=>@batch.id,:forenoon=>true,:afternoon=>false,:month_date => @start_date..@end_date).group(:student_id).count
+        leaves_afternoon=Attendance.where(:batch_id=>@batch.id,:forenoon=>false,:afternoon=>true,:month_date => @start_date..@end_date).group(:student_id).count
+        leaves_full=Attendance.where(:batch_id=>@batch.id,:forenoon=>true,:afternoon=>true,:month_date => @start_date..@end_date).group(:student_id).count
         @students.each do |student|
           @leaves[student.id]['total']=@academic_days-leaves_full[student.id].to_f-(0.5*(leaves_forenoon[student.id].to_f+leaves_afternoon[student.id].to_f))
           @leaves[student.id]['percent'] = (@leaves[student.id]['total'].to_f/@academic_days)*100 unless @academic_days == 0
@@ -469,7 +470,6 @@ class AttendanceReportsController < ApplicationController
       @report = ''
     end
     render :pdf => 'report_pdf'
-             
     #    render :layout=>'pdf'
     #    respond_to do |format|
     #      format.pdf { render :layout => false }
@@ -477,7 +477,7 @@ class AttendanceReportsController < ApplicationController
   end
 
   def filter_report_pdf
-    @config = Configuration.find_by_config_key('StudentAttendanceType')
+    @config = Config.find_by_config_key('StudentAttendanceType')
     @batch = Batch.find(params[:filter][:batch])
     @students = @batch.students.by_first_name
     @start_date = (params[:filter][:start_date]).to_date
@@ -493,7 +493,7 @@ class AttendanceReportsController < ApplicationController
           unless params[:filter][:subject] == '0'
             @subject = Subject.find params[:filter][:subject]
             @academic_days=@batch.subject_hours(@start_date, @end_date, params[:filter][:subject]).values.flatten.compact.count
-            @grouped = SubjectLeave.find_all_by_subject_id(@subject.id,  :conditions =>{:month_date => @start_date..@end_date}).group_by(&:student_id)
+            @grouped = SubjectLeave.where(:subject_id => @subject.id,:month_date => @start_date..@end_date).group_by(&:student_id)
             @batch.students.by_first_name.each do |s|
               if @grouped[s.id].nil?
                 @leaves[s.id]['leave']=0
@@ -505,7 +505,7 @@ class AttendanceReportsController < ApplicationController
             end
           else
             @academic_days=@batch.subject_hours(@start_date, @end_date, 0).values.flatten.compact.count
-            @grouped = @batch.subject_leaves(:all,  :conditions =>{:month_date => @start_date..@end_date}).group_by(&:student_id)
+            @grouped = @batch.subject_leaves.where(:month_date => @start_date..@end_date).group_by(&:student_id)
             @batch.students.by_first_name.each do |s|
               if @grouped[s.id].nil?
                 @leaves[s.id]['leave']=0
@@ -526,9 +526,9 @@ class AttendanceReportsController < ApplicationController
             @academic_days=  working_days.select{|v| v<=@end_date}.count
           end
           @students = @batch.students.by_first_name
-          leaves_forenoon=Attendance.count(:all,:conditions=>{:batch_id=>@batch.id,:forenoon=>true,:afternoon=>false,:month_date => @start_date..@end_date},:group=>:student_id)
-          leaves_afternoon=Attendance.count(:all,:conditions=>{:batch_id=>@batch.id,:forenoon=>false,:afternoon=>true,:month_date => @start_date..@end_date},:group=>:student_id)
-          leaves_full=Attendance.count(:all,:conditions=>{:batch_id=>@batch.id,:forenoon=>true,:afternoon=>true,:month_date => @start_date..@end_date},:group=>:student_id)
+          leaves_forenoon=Attendance.where(:batch_id=>@batch.id,:forenoon=>true,:afternoon=>false,:month_date => @start_date..@end_date).group(:student_id).count
+          leaves_afternoon=Attendance.where(:batch_id=>@batch.id,:forenoon=>false,:afternoon=>true,:month_date => @start_date..@end_date).group(:student_id).count
+          leaves_full=Attendance.where(:batch_id=>@batch.id,:forenoon=>true,:afternoon=>true,:month_date => @start_date..@end_date).group(:student_id).count
           @students.each do |student|
             @leaves[student.id]['total']=@academic_days-leaves_full[student.id].to_f-(0.5*(leaves_forenoon[student.id].to_f+leaves_afternoon[student.id].to_f))
             @leaves[student.id]['percent'] = (@leaves[student.id]['total'].to_f/@academic_days)*100 unless @academic_days == 0
@@ -541,8 +541,6 @@ class AttendanceReportsController < ApplicationController
       end
     end
     render :pdf => 'filter_report_pdf'
-            
-
 
     #    respond_to do |format|
     #      format.pdf { render :layout => false }
