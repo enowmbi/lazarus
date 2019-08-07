@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2019_07_27_210451) do
+ActiveRecord::Schema.define(version: 2019_08_07_093105) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -667,6 +667,7 @@ ActiveRecord::Schema.define(version: 2019_07_27_210451) do
     t.datetime "created_at"
     t.datetime "updated_at"
     t.decimal "marks", precision: 15, scale: 2
+    t.integer "course_id"
   end
 
   create_table "class_timings", force: :cascade do |t|
