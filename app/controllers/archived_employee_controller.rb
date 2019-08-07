@@ -18,8 +18,8 @@
 
 class ArchivedEmployeeController < ApplicationController
 
-  before_filter :login_required,:configuration_settings_for_hr
-  filter_access_to :all
+  before_action :login_required,:configuration_settings_for_hr
+ #TODO filter_access_to :all
 #  prawnto :prawn => {:left_margin => 25, :right_margin => 25}
 
   
@@ -27,7 +27,7 @@ class ArchivedEmployeeController < ApplicationController
   def profile
     @current_user = current_user
     @employee = ArchivedEmployee.find(params[:id])
-    @new_reminder_count = Reminder.find_all_by_recipient(@current_user.id, :conditions=>"is_read = false")
+    @new_reminder_count = Reminder.where(["recipient = ? AND is_read = false",@current_user.id])
     @gender = "Male"
     @gender = "Female" if @employee.gender == "f"
     @status = "Active"
@@ -83,21 +83,24 @@ class ArchivedEmployeeController < ApplicationController
 
   def profile_bank_details
     @employee = ArchivedEmployee.find(params[:id])
-    @bank_details = ArchivedEmployeeBankDetail.find_all_by_employee_id(@employee.id)
+    #TODO @bank_details = ArchivedEmployeeBankDetail.find_all_by_employee_id(@employee.id)
+    @bank_details = ArchivedEmployeeBankDetail.where(:employee_id => @employee.id)
     render :partial => "bank_details"
   end
 
   def profile_additional_details
     @employee = ArchivedEmployee.find(params[:id])
-    @additional_details = ArchivedEmployeeAdditionalDetail.find_all_by_employee_id(@employee.id)
+    #TODO @additional_details = ArchivedEmployeeAdditionalDetail.find_all_by_employee_id(@employee.id)
+    @additional_details = ArchivedEmployeeAdditionalDetail.where(:employee_id => @employee.id)
     render :partial => "additional_details"
   end
 
 
   def profile_payroll_details
-    @currency_type = Configuration.find_by_config_key("CurrencyType").config_value
+    @currency_type = Config.find_by_config_key("CurrencyType").config_value
     @employee = ArchivedEmployee.find(params[:id])
-    @payroll_details = ArchivedEmployeeSalaryStructure.find_all_by_employee_id(@employee, :order=>"payroll_category_id ASC")
+    #TODO @payroll_details = ArchivedEmployeeSalaryStructure.find_all_by_employee_id(@employee, :order=>"payroll_category_id ASC")
+    @payroll_details = ArchivedEmployeeSalaryStructure.where(:emplopyee_id => @employee).order("payroll_category_id ASC")
     render :partial => "payroll_details"
   end
 
@@ -119,15 +122,17 @@ class ArchivedEmployeeController < ApplicationController
     @total_months = exp_months+current_months unless exp_months.nil?
     @home_country = Country.find(@employee.home_country_id).name unless @employee.home_country_id.nil?
     @office_country = Country.find(@employee.office_country_id).name unless @employee.office_country_id.nil?
-    @bank_details = ArchivedEmployeeBankDetail.find_all_by_employee_id(@employee.id)
-    @additional_details = ArchivedEmployeeAdditionalDetail.find_all_by_employee_id(@employee.id)
+    #TODO @bank_details = ArchivedEmployeeBankDetail.find_all_by_employee_id(@employee.id)
+    @bank_details = ArchivedEmployeeBankDetail.where(:employee_id => @employee.id)
+    #TODO @additional_details = ArchivedEmployeeAdditionalDetail.find_all_by_employee_id(@employee.id)
+    @additional_details = ArchivedEmployeeAdditionalDetail.where(:employee_id => @employee.id)
       render :pdf => 'profile_pdf'
 
   end
 
   def show
     @employee = ArchivedEmployee.find(params[:id])
-    send_data(@employee.photo_data, :type => @employee.photo_content_type, :filename => @employee.photo_filename, :disposition => 'inline')
+    #TODO send_data(@employee.photo_data, :type => @employee.photo_content_type, :filename => @employee.photo_filename, :disposition => 'inline')
   end
 
 
