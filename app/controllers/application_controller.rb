@@ -17,19 +17,16 @@
 #limitations under the License.
 
 class ApplicationController < ActionController::Base
-helper :all
-  helper_method :can_access_request?
-  # protect_from_forgery # :secret => '434571160a81b5595319c859d32060c1'
-  # filter_parameter_logging :password
+#TODO   helper_method :can_access_request?
   
-  # before_action { |c| Authorization.current_user = c.current_user }
+  #TODO before_action { |c| Authorization.current_user = c.current_user }
   before_action :message_user
   before_action :set_user_language
   before_action :set_variables
   before_action :login_check
 
   before_action :dev_mode
-  # include CustomInPlaceEditing
+  #TODO include CustomInPlaceEditing
 
   def login_check
     if session[:user_id].present?
@@ -355,12 +352,3 @@ helper :all
     News.new.reload_news_bar
   end
 end
-
-
-
-
-
-
-
-
-
