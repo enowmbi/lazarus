@@ -17,7 +17,7 @@
 #limitations under the License.
 
 class FaGroupsController < ApplicationController
-  before_filter :login_required
+  before_action :login_required
   filter_access_to :all
 
   def index
@@ -78,7 +78,8 @@ class FaGroupsController < ApplicationController
   end
 
   def select_subjects
-    @subjects = Subject.find(:all,:joins=>:batch, :conditions=>{:batches=>{:course_id=>params[:course_id]},:is_deleted=>false},:group=>:code)
+    #TODO  @subjects = Subject.find(:all,:joins=>:batch, :conditions=>{:batches=>{:course_id=>params[:course_id]},:is_deleted=>false},:group=>:code)
+    @subjects = Subject.joins(:batch).where("batches.course_id = ? AND subjects.is_deleted = false",params[:course_id]).group(:code,:id)
     render :update do |page|
       page.replace_html 'subjects', :partial => 'subjects', :object => @subjects
     end
@@ -98,10 +99,11 @@ class FaGroupsController < ApplicationController
 
   def update_subject_fa_groups
     @subject=Subject.find(params[:id])
-    subjects=Subject.find(:all,:joins=>:batch,:readonly=>false, :conditions=>{:code=>@subject.code, :is_deleted=>false,:batches=>{:course_id=>@subject.batch.course_id}})
+    #TODO ':readonly=>false) checkbelow'  subjects=Subject.find(:all,:joins=>:batch,:readonly=>false, :conditions=>{:code=>@subject.code, :is_deleted=>false,:batches=>{:course_id=>@subject.batch.course_id}})
+    subjects=Subject.joins(:batch).where(:code=>@subject.code, :is_deleted=>false,:batches=>{:course_id=>@subject.batch.course_id})
     new_fa_groups = params[:subject][:fa_group_ids] if params[:subject]
     new_fa_groups ||= []
-    fa_groups = FaGroup.find_all_by_id(new_fa_groups)
+    fa_groups = FaGroup.where(:id => new_fa_groups)
     a=s=nil
     Subject.transaction do
       subjects.each do |sub|
@@ -136,7 +138,7 @@ class FaGroupsController < ApplicationController
   def create_fa_criteria
     @fa_criteria=FaCriteria.new(params[:fa_criteria])
     @fa_group=FaGroup.find(params[:fa_criteria][:fa_group_id])
-    @fa_criteria.sort_order=@fa_group.fa_criterias.find(:last,:order=>"sort_order ASC").try(:sort_order).to_i+1 || 1
+    @fa_criteria.sort_order=@fa_group.fa_criterias.order("sort_order ASC").last.try(:sort_order).to_i+1 || 1
     if @fa_criteria.save
       @fa_criterias=@fa_group.fa_criterias.active
       flash[:notice]="FA Criteria created successfully"
@@ -179,7 +181,7 @@ class FaGroupsController < ApplicationController
     if request.post?
       fa_criteria=FaCriteria.find(params[:id])
       fa_group=fa_criteria.fa_group
-      swap=fa_group.fa_criterias.all(:order=>"sort_order ASC")
+      swap=fa_group.fa_criterias.order("sort_order ASC")
       initial=params[:count].to_i
       src=swap[initial]
       if params[:direction]=='up'
