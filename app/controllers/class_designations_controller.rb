@@ -17,7 +17,7 @@
 #limitations under the License.
 
 class ClassDesignationsController < ApplicationController
-  before_filter :login_required
+  before_action :login_required
   filter_access_to :all
 
   def index
@@ -28,7 +28,7 @@ class ClassDesignationsController < ApplicationController
   def load_class_designations
     unless params[:course_id]==""
       @course = Course.find(params[:course_id])
-      @class_designations = ClassDesignation.find(:all,:conditions=>{:course_id=>@course.id})
+      @class_designations = ClassDesignation.where(:course_id=>@course.id)
       @class_designation = ClassDesignation.new
       render(:update) do|page|
         page.replace_html "course_class_designations", :partial=>"course_class_designations"
@@ -105,7 +105,6 @@ class ClassDesignationsController < ApplicationController
       page.replace_html 'errors', :partial=>"form_errors"
       page.replace_html 'class_form', :partial=>"class_form"
     end
-    
   end
 
 end
