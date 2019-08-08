@@ -17,8 +17,8 @@
 #limitations under the License.
 
 class CoursesController < ApplicationController
-  before_filter :login_required
-  before_filter :find_course, :only => [:show, :edit, :update, :destroy]
+  before_action :login_required
+  before_action :find_course, :only => [:show, :edit, :update, :destroy]
   filter_access_to :all
   
   def index
@@ -190,7 +190,7 @@ class CoursesController < ApplicationController
   end
 
   def update_batch
-    @batch = Batch.find_all_by_course_id(params[:course_name], :conditions => { :is_deleted => false, :is_active => true })
+    @batch = Batch.where(:course_id => params[:course_name], :is_deleted => false, :is_active => true )
 
     render(:update) do |page|
       page.replace_html 'update_batch', :partial=>'update_batch'
