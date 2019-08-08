@@ -17,12 +17,12 @@
 #limitations under the License.
 
 class ClassTimingsController < ApplicationController
-  before_filter :login_required
+  before_action :login_required
   filter_access_to :all
 
   def index
     @batches = Batch.active
-    @class_timings = ClassTiming.find(:all,:conditions => { :batch_id => nil,:is_deleted=>false}, :order =>'start_time ASC')
+    @class_timings = ClassTiming.where(:batch_id => nil,:is_deleted=>false).order('start_time ASC')
   end
 
   def new
@@ -39,7 +39,7 @@ class ClassTimingsController < ApplicationController
     respond_to do |format|
       if @class_timing.save
         @class_timing.batch.nil? ?
-          @class_timings = ClassTiming.find(:all,:conditions => { :batch_id => nil,:is_deleted=>false}, :order =>'start_time ASC') :
+          @class_timings = ClassTiming.where(:batch_id => nil,:is_deleted=>false).order('start_time ASC') : 
           @class_timings = ClassTiming.for_batch(@class_timing.batch_id)
         #  flash[:notice] = 'Class timing was successfully created.'
         format.html { redirect_to class_timing_url(@class_timing) }
@@ -65,7 +65,7 @@ class ClassTimingsController < ApplicationController
     respond_to do |format|
       if @class_timing.update_attributes(params[:class_timing])
         @class_timing.batch.nil? ?
-          @class_timings = ClassTiming.find(:all,:conditions => { :batch_id => nil}, :order =>'start_time ASC') :
+          @class_timings = ClassTiming.where(:batch_id => nil).order('start_time ASC') :
           @class_timings = ClassTiming.for_batch(@class_timing.batch_id)
         #     flash[:notice] = 'Class timing updated successfully.'
         format.html { redirect_to class_timing_url(@class_timing) }
@@ -81,7 +81,7 @@ class ClassTimingsController < ApplicationController
   def show
     @batch = nil
     if params[:batch_id] == ''
-      @class_timings = ClassTiming.find(:all, :conditions=>["batch_id is null and is_deleted = false"])
+      @class_timings = ClassTiming.where("batch_id is null and is_deleted = false")
     else
       @class_timings = ClassTiming.active_for_batch(params[:batch_id])
       @batch = Batch.find params[:batch_id] unless params[:batch_id] == ''
