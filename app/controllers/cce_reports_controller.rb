@@ -17,7 +17,7 @@
 #limitations under the License.
 
 class CceReportsController < ApplicationController
-  before_filter :login_required
+  before_action :login_required
   #  before_filter :load_cce_report, :only=>[:show_student_wise_report]
   filter_access_to :all 
   #  filter_access_to :show_student_wise_report, :attribute_check => true
@@ -31,7 +31,7 @@ class CceReportsController < ApplicationController
     if request.post?      
       unless params[:course][:batch_ids].blank?
         errors = []
-        batches = Batch.find_all_by_id(params[:course][:batch_ids])
+        batches = Batch.where("id = ? ",params[:course][:batch_ids])
         batches.each do |batch|
           if batch.check_credit_points
             batch.job_type = "3"
@@ -54,7 +54,7 @@ class CceReportsController < ApplicationController
     @batches=Batch.cce
     if request.post?      
       @batch=Batch.find(params[:batch_id])
-      @students=@batch.students.all(:order=>"first_name ASC")
+      @students=@batch.students.order("first_name ASC")
       @student = @students.first
       if @student
         fetch_report
@@ -104,10 +104,10 @@ class CceReportsController < ApplicationController
   def fetch_report
     @report=@student.individual_cce_report_cached
     @subjects=@student.all_subjects.select{|x| x.no_exams==false}
-    @exam_groups=ExamGroup.find_all_by_id(@report.exam_group_ids, :include=>:cce_exam_category)
+    @exam_groups=ExamGroup.where("id = ?",@report.exam_group_ids).includes(:cce_exam_category)
     coscholastic=@report.coscholastic
     @observation_group_ids=coscholastic.collect(&:observation_group_id)
-    @observation_groups=ObservationGroup.find_all_by_id(@observation_group_ids).collect(&:name)
+    @observation_groups=ObservationGroup.where("id = ?",@observation_group_ids).collect(&:name)
     @co_hash=Hash.new { |h, k| h[k] = Hash.new(&h.default_proc) }
     @obs_groups=@batch.observation_groups.to_a
     @og=@obs_groups.group_by(&:observation_kind)
