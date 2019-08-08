@@ -17,7 +17,7 @@
 #limitations under the License.
 
 class CceWeightagesController < ApplicationController
-  before_filter :login_required
+  before_action :login_required
   filter_access_to :all
   def index
     @weightages=CceWeightage.all
@@ -82,7 +82,7 @@ class CceWeightagesController < ApplicationController
     if request.post?
       new_courses = params[:cce_weightage][:course_ids] if params[:cce_weightage]
       new_courses ||= []
-      @weightage.courses = Course.find_all_by_id(new_courses)
+      @weightage.courses = Course.find(new_courses)
       flash[:notice] = "saved"
       redirect_to ""
     end
@@ -109,7 +109,7 @@ class CceWeightagesController < ApplicationController
     @course=Course.find(params[:id])
     new_weightages = params[:course][:weightage_ids] if params[:course]
     new_weightages ||= []
-    @course.cce_weightages = CceWeightage.find_all_by_id(new_weightages)
+    @course.cce_weightages = CceWeightage.find(new_weightages)
     @course_weightages=@course.cce_weightages
     @weightages=CceWeightage.all
     if @course.save
