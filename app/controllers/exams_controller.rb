@@ -17,18 +17,18 @@
 #limitations under the License.
 
 class ExamsController < ApplicationController
-  before_filter :login_required
-  before_filter :query_data
-  before_filter :protect_other_student_data
-  before_filter :restrict_employees_from_exam, :except=>[:edit, :destroy]
-  before_filter :restrict_employees_from_exam_edit, :only=>[:edit, :destroy]
+  before_action :login_required
+  before_action :query_data
+  before_action :protect_other_student_data
+  before_action :restrict_employees_from_exam, :except=>[:edit, :destroy]
+  before_action :restrict_employees_from_exam_edit, :only=>[:edit, :destroy]
   filter_access_to :all
 
   def new
     @exam = Exam.new
     @subjects = @batch.subjects
     if @current_user.employee? and  !@current_user.privileges.map{|m| m.name}.include?("ExaminationControl")
-      @subjects= Subject.find(:all,:joins=>"INNER JOIN employees_subjects ON employees_subjects.subject_id = subjects.id AND employee_id = #{@current_user.employee_record.id} AND batch_id = #{@batch.id} ")
+      @subjects= Subject.joins(:employees_subjects).where("employee_id = ? AND batch_id =?",@current_user.employee_record.id,@batch.id)
     end
     @subjects.reject!{|s| (@exam_group.exams.map{|e| e.subject_id}.include?(s.id))}
     if @subjects.blank?
@@ -57,7 +57,7 @@ class ExamsController < ApplicationController
     else
       @subjects = @batch.subjects
       if @current_user.employee? and  !@current_user.privileges.map{|m| m.name}.include?("ExaminationControl")
-        @subjects= Subject.find(:all,:joins=>"INNER JOIN employees_subjects ON employees_subjects.subject_id = subjects.id AND employee_id = #{@current_user.employee_record.id} AND batch_id = #{@batch.id} ")
+      @subjects= Subject.joins(:employees_subjects).where("employee_id = ? AND batch_id =?",@current_user.employee_record.id,@batch.id)
       end
       render 'new'
     end
@@ -67,7 +67,7 @@ class ExamsController < ApplicationController
     @exam = Exam.find params[:id], :include => :exam_group
     @subjects = @exam_group.batch.subjects
     if @current_user.employee?  and !@current_user.privileges.map{|m| m.name}.include?("ExaminationControl")
-      @subjects= Subject.find(:all,:joins=>"INNER JOIN employees_subjects ON employees_subjects.subject_id = subjects.id AND employee_id = #{@current_user.employee_record.id} AND batch_id = #{@batch.id} ")
+      @subjects= Subject.joins(:employees_subjects).where("employee_id = ? AND batch_id =?",@current_user.employee_record.id,@batch.id)
       unless @subjects.map{|m| m.id}.include?(@exam.subject_id)
         flash[:notice] = "#{t('flash_msg4')}"
         redirect_to [@batch, @exam_group]
@@ -84,7 +84,7 @@ class ExamsController < ApplicationController
     else
       @subjects = @batch.subjects
       if @current_user.employee? and  !@current_user.privileges.map{|m| m.name}.include?("ExaminationControl")
-        @subjects= Subject.find(:all,:joins=>"INNER JOIN employees_subjects ON employees_subjects.subject_id = subjects.id AND employee_id = #{@current_user.employee_record.id} AND batch_id = #{@batch.id} ")
+      @subjects= Subject.joins(:employees_subjects).where("employee_id = ? AND batch_id =?",@current_user.employee_record.id,@batch.id)
       end
       render 'edit'
     end
@@ -93,7 +93,7 @@ class ExamsController < ApplicationController
   def show
     @employee_subjects=[]
     @employee_subjects= @current_user.employee_record.subjects.map { |n| n.id} if @current_user.employee?
-    @exam = Exam.find params[:id], :include => :exam_group
+    @exam = Exam.includes(:exam_group).find(params[:id])
     unless @employee_subjects.include?(@exam.subject_id) or @current_user.admin? or @current_user.privileges.map{|p| p.name}.include?('ExaminationControl') or @current_user.privileges.map{|p| p.name}.include?('EnterResults')
       flash[:notice] = "#{t('flash_msg6')}"
       redirect_to :controller=>"user", :action=>"dashboard"
@@ -103,7 +103,7 @@ class ExamsController < ApplicationController
     if is_elective == nil
       @students = @batch.students.by_first_name
     else
-      assigned_students = StudentsSubject.find_all_by_subject_id(exam_subject.id)
+      assigned_students = StudentsSubject.where(:subject_id => exam_subject.id)
       @students = []
       assigned_students.each do |s|
         student = Student.find_by_id(s.student_id)
@@ -115,15 +115,15 @@ class ExamsController < ApplicationController
         @students.push s[2]
       end
     end
-    @config = Configuration.get_config_value('ExamResultType') || 'Marks'
+    @config = Config.get_config_value('ExamResultType') || 'Marks'
 
     @grades = @batch.grading_level_list
   end
 
   def destroy
-    @exam = Exam.find params[:id], :include => :exam_group
+    @exam = Exam.includes(:exam_group).find(params[:id])
     if @current_user.employee?  and !@current_user.privileges.map{|m| m.name}.include?("ExaminationControl")
-      @subjects= Subject.find(:all,:joins=>"INNER JOIN employees_subjects ON employees_subjects.subject_id = subjects.id AND employee_id = #{@current_user.employee_record.id} AND batch_id = #{@batch.id} ")
+      @subjects= Subject.joins(:employees_subjects).where("employee_id = ? AND batch_id =?",@current_user.employee_record.id,@batch.id)
       unless @subjects.map{|m| m.id}.include?(@exam.subject_id)
         flash[:notice] = "#{t('flash_msg4')}"
         redirect_to [@batch, @exam_group] and return
@@ -144,7 +144,7 @@ class ExamsController < ApplicationController
     @exam = Exam.find(params[:id])
     @error= false
     params[:exam].each_pair do |student_id, details|
-      @exam_score = ExamScore.find(:first, :conditions => {:exam_id => @exam.id, :student_id => student_id} )
+      @exam_score = ExamScore.where(:exam_id => @exam.id, :student_id => student_id).first
       if @exam_score.nil?
         if details[:marks].to_f <= @exam.maximum_marks.to_f
           ExamScore.create do |score|
@@ -177,7 +177,7 @@ class ExamsController < ApplicationController
 
   private
   def query_data
-    @exam_group = ExamGroup.find(params[:exam_group_id], :include => :batch)
+    @exam_group = ExamGroup.includes(:batch).find(params[:exam_group_id])
     @batch = @exam_group.batch
     @course = @batch.course
   end
