@@ -17,7 +17,7 @@
 #limitations under the License.
 
 class EventController < ApplicationController
-  before_filter :login_required
+  before_action :login_required
   filter_access_to :all
   
   def index
@@ -97,7 +97,7 @@ class EventController < ApplicationController
 
   def select_employee_department
     @event_id = params[:id]
-    @employee_department = EmployeeDepartment.find(:all, :conditions=>"status = true")
+    @employee_department = EmployeeDepartment.where("status = true")
     render :update do |page|
       page.replace_html 'select-options', :partial => 'select_employee_department'
     end
@@ -137,10 +137,10 @@ class EventController < ApplicationController
     @command = params[:cmd]
     event_start_date = "#{@event.start_date.year}-#{@event.start_date.month}-#{@event.start_date.day}".to_date
     event_end_date = "#{@event.end_date.year}-#{@event.end_date.month}-#{@event.end_date.day}".to_date
-    @other_events = Event.find(:all, :conditions=>"id != #{@event.id}")
+    @other_events = Event.where("id != ?",@event.id)
     if @event.is_common ==false
-      @batch_events = BatchEvent.find(:all, :conditions=>"event_id = #{@event.id}")
-      @department_event = EmployeeDepartmentEvent.find(:all, :conditions=>"event_id = #{@event.id}")
+      @batch_events = BatchEvent.where("event_id = ?",@event.id)
+      @department_event = EmployeeDepartmentEvent.where("event_id = ?",@event.id)
     end
   end
 
@@ -151,7 +151,7 @@ class EventController < ApplicationController
     reminder_recipient_ids = []
     if event.is_common == true
       if event.is_holiday == true
-        @pe = PeriodEntry.find(:all, :conditions=>"month_date BETWEEN '" + event.start_date.strftime("%Y-%m-%d") + "' AND '" +  event.end_date.strftime("%Y-%m-%d") +"'")
+        @pe = PeriodEntry.where("month_date BETWEEN '" + event.start_date.strftime("%Y-%m-%d") + "' AND '" +  event.end_date.strftime("%Y-%m-%d") +"'")
         unless @pe.nil?
           @pe.each do |p|
             p.delete
@@ -188,6 +188,7 @@ class EventController < ApplicationController
         end
         unless recipients.empty?
           message = "#{t('event_notification')}: #{event.title}.#{t('from')} : #{event.start_date} #{t('to')} #{event.end_date}"
+          #TODO 'use sidekiq - see below'
           Delayed::Job.enqueue(SmsManager.new(message,recipients))
         end
       end
@@ -198,14 +199,14 @@ class EventController < ApplicationController
       unless batch_event.empty?
         batch_event.each do |b|
           if event.is_holiday == true
-            @pe = PeriodEntry.find_all_by_batch_id(b.id, :conditions=>"month_date BETWEEN '" + event.start_date.strftime("%Y-%m-%d") + "' AND '" +  event.end_date.strftime("%Y-%m-%d") +"'")
+            @pe = PeriodEntry.where("batch_id = ? AND month_date BETWEEN '" + event.start_date.strftime("%Y-%m-%d") + "' AND '" +  event.end_date.strftime("%Y-%m-%d") +"'",b.id)
             unless @pe.nil?
               @pe.each do |p|
                 p.delete
               end
             end
           end
-          @batch_students = Student.find(:all, :conditions=>"batch_id = #{b.batch_id}")
+          @batch_students = Student.where("batch_id = ?",b.batch_id)
           @batch_students.each do |s|
             reminder_recipient_ids << s.user_id
             if sms_setting.application_sms_active and sms_setting.event_news_sms_active
@@ -224,10 +225,10 @@ class EventController < ApplicationController
           end
         end
       end
-      department_event = EmployeeDepartmentEvent.find_all_by_event_id(event.id)
+      department_event = EmployeeDepartmentEvent.where("event_id = ? ",event.id)
       unless department_event.empty?
         department_event.each do |d|
-          @dept_emp = Employee.find(:all, :conditions=>"employee_department_id = #{d.employee_department_id}")
+          @dept_emp = Employee.where("employee_department_id = ?",d.employee_department_id)
           @dept_emp.each do |e|
             reminder_recipient_ids << e.user_id
             if sms_setting.application_sms_active and sms_setting.event_news_sms_active
@@ -243,6 +244,7 @@ class EventController < ApplicationController
         Delayed::Job.enqueue(SmsManager.new(message,recipients))
       end
     end
+    #TODO 'sidekiq '
     Delayed::Job.enqueue(DelayedReminderJob.new( :sender_id  => current_user.id,
         :recipient_ids => reminder_recipient_ids,
         :subject=>reminder_subject,
@@ -252,8 +254,8 @@ class EventController < ApplicationController
 
   def cancel_event
     event = Event.find(params[:id])
-    batch_event = BatchEvent.find(:all, :conditions=>"event_id = #{params[:id]}")
-    dept_event = EmployeeDepartmentEvent.find(:all, :conditions=>"event_id = #{params[:id]}")
+    batch_event = BatchEvent.where("event_id = ?",params[:id])
+    dept_event = EmployeeDepartmentEvent.where("event_id = ?",params[:id])
     event.destroy
     
     batch_event.each { |x| x.destroy } unless batch_event.nil?
@@ -270,6 +272,3 @@ class EventController < ApplicationController
   end
 
 end
-
-
-
