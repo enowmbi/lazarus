@@ -1102,7 +1102,7 @@ class EmployeeController < ApplicationController
     department_id = params[:department_id]
     #@employees = Employee.find_all_by_employee_department_id(department_id)
     #TODO see below @employees = MonthlyPayslip.find(:all, :conditions =>"is_rejected is true", :group=>'employee_id', :joins=>"INNER JOIN employees on monthly_payslips.employee_id = employees.id")
-    @employees = MonthlyPayslip.joins(:employee).where("monthly_payslips.is_rejected =true").group('employee_id,id')
+    @employees = MonthlyPayslip.joins(:employee).where("monthly_payslips.is_rejected =true").group('employee_id,id') #TODO added id in group
     @employees.reject!{|x| x.employee.employee_department_id != department_id.to_i}
 
     render :update do |page|
