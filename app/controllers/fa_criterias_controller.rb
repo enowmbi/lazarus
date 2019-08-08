@@ -17,7 +17,7 @@
 #limitations under the License.
 
 class FaCriteriasController < ApplicationController
-  before_filter :login_required
+  before_action :login_required
   filter_access_to :all
   def index
     @fa_group=FaGroup.find(params[:fa_group_id])
