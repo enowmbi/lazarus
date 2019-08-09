@@ -53,9 +53,9 @@ class Batch < ApplicationRecord
 
   attr_accessor :job_type
 
-  scope :active,lambda{where(:is_deleted => false, :is_active =>true).joins(:course).select("`batches`.*,CONCAT(courses.code,'-',batches.name) as course_full_name").order("course_full_name")}
-  scope :inactive,lambda{where(:is_deleted => false, :is_active => false).joins(:course).select("`batches`.*,CONCAT(courses.code,'-',batches.name) as course_full_name").order("course_full_name")}
-  scope :deleted,lambda{where(:is_deleted => true).joins(:course).select("`batches`.*,CONCAT(courses.code,'-',batches.name) as course_full_name").order("course_full_name")}
+  scope :active,lambda{joins(:course).where(:is_deleted => false, :is_active =>true).select("batches.*,CONCAT(courses.code,'-',batches.name) as course_full_name").order("course_full_name")}
+  scope :inactive,lambda{joins(:course).where(:is_deleted => false, :is_active => false).select("batches.*,CONCAT(courses.code,'-',batches.name) as course_full_name").order("course_full_name")}
+  scope :deleted,lambda{joins(:course).where(:is_deleted => true).select("batches.*,CONCAT(courses.code,'-',batches.name) as course_full_name").order("course_full_name")}
   scope :cce, lambda{joins(:course).select("batches.*").where(["courses.grading_type = #{GRADINGTYPES.invert['CCE']}"]).order('code')}
 
   def validate
