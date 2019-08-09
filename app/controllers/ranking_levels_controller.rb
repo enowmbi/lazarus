@@ -18,7 +18,7 @@
 
 class RankingLevelsController < ApplicationController
 
-  before_filter :login_required
+  before_action :login_required
   filter_access_to :all
 
   def index
@@ -30,7 +30,7 @@ class RankingLevelsController < ApplicationController
   def load_ranking_levels
     unless params[:course_id]==""
       @course = Course.find(params[:course_id])
-      @ranking_levels = RankingLevel.find(:all,:conditions=>{:course_id=>@course.id},:order=>"priority ASC")
+      @ranking_levels = RankingLevel.where(:course_id=>@course.id).order("priority ASC")
       @ranking_level = RankingLevel.new
       render(:update) do|page|
         page.replace_html "course_ranking_levels", :partial=>"course_ranking_levels"
@@ -57,7 +57,7 @@ class RankingLevelsController < ApplicationController
     @ranking_level.course_id = @course.id
     if @ranking_level.save
       @ranking_level = RankingLevel.new
-      @ranking_levels = RankingLevel.find(:all,:conditions=>{:course_id=>@course.id},:order=>"priority ASC")
+      @ranking_levels = RankingLevel.where(:course_id=>@course.id).order("priority ASC")
       render(:update) do|page|
         page.replace_html "category-list", :partial=>"ranking_levels"
         page.replace_html 'flash', :text=>"<p class='flash-msg'>#{t('ranking_levels.flash1')}</p>"
@@ -87,7 +87,7 @@ class RankingLevelsController < ApplicationController
     @course = @ranking_level.course
     if @ranking_level.update_attributes(params[:ranking_level])
       @ranking_level = RankingLevel.new
-      @ranking_levels = RankingLevel.find(:all,:conditions=>{:course_id=>@course.id},:order=>"priority ASC")
+      @ranking_levels = RankingLevel.where(:course_id=>@course.id).order("priority ASC")
       render(:update) do|page|
         page.replace_html "category-list", :partial=>"ranking_levels"
         page.replace_html 'flash', :text=>"<p class='flash-msg'>#{t('ranking_levels.flash2')}</p>"
@@ -107,7 +107,7 @@ class RankingLevelsController < ApplicationController
     @course = @ranking_level.course
     if @ranking_level.destroy
       @ranking_level = RankingLevel.new
-      @ranking_levels = RankingLevel.find(:all,:conditions=>{:course_id=>@course.id},:order=>"priority ASC")
+      @ranking_levels = RankingLevel.where(:course_id=>@course.id).order("priority ASC")
       render(:update) do|page|
         page.replace_html "category-list", :partial=>"ranking_levels"
         page.replace_html 'flash', :text=>"<p class='flash-msg'>#{t('ranking_levels.flash3')}</p>"
@@ -124,7 +124,7 @@ class RankingLevelsController < ApplicationController
 
   def ranking_level_cancel
     @course = Course.find(params[:course_id])
-    @ranking_levels = RankingLevel.find(:all,:conditions=>{:course_id=>@course.id},:order=>"priority ASC")
+    @ranking_levels = RankingLevel.where(:course_id=>@course.id).order("priority ASC")
     @ranking_level = RankingLevel.new
     render(:update) do|page|
       page.replace_html "category-list", :partial=>"ranking_levels"
@@ -138,7 +138,7 @@ class RankingLevelsController < ApplicationController
     @ranking_level = RankingLevel.find(params[:id])
     @course = @ranking_level.course
     priority = @ranking_level.priority
-    @ranking_levels = @course.ranking_levels.all(:order=> "priority ASC").map{|b| b.priority.to_i}
+    @ranking_levels = @course.ranking_levels.order("priority ASC").map{|b| b.priority.to_i}
     position = @ranking_levels.index(priority)
     if params[:order]=="up"
       prev_rank = RankingLevel.find_by_priority_and_course_id(@ranking_levels[position - 1],@course.id)
@@ -148,7 +148,7 @@ class RankingLevelsController < ApplicationController
     @ranking_level.update_attributes(:priority=>prev_rank.priority)
     prev_rank.update_attributes(:priority=>priority.to_i)
     @ranking_level = RankingLevel.new
-    @ranking_levels = RankingLevel.find(:all,:conditions=>{:course_id=>@course.id},:order=>"priority ASC")
+    @ranking_levels = RankingLevel.where(:course_id=>@course.id).order("priority ASC")
     render(:update) do|page|
       page.replace_html "category-list", :partial=>"ranking_levels"
     end
