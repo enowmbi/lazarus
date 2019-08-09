@@ -17,7 +17,7 @@
 #limitations under the License.
 
 class TimetableEntriesController < ApplicationController
-  before_filter :login_required
+  before_action :login_required
   filter_access_to :all
 
   def new
@@ -61,7 +61,7 @@ class TimetableEntriesController < ApplicationController
       render :text => ""
       return
     end
-    @employees_subject = EmployeesSubject.find_all_by_subject_id(params[:subject_id])
+    @employees_subject = EmployeesSubject.where(:subject_id => params[:subject_id])
     render :partial=>"employee_list"
   end
 
@@ -101,12 +101,10 @@ class TimetableEntriesController < ApplicationController
 
       # check for weekly subject limit.
       errors["messages"] << "#{t('weekly_limit_reached')}" \
-        if subject.max_weekly_classes <= TimetableEntry.count(:conditions =>{:subject_id=>subject.id,:timetable_id=>@timetable.id}) unless subject.max_weekly_classes.nil?
+        if subject.max_weekly_classes <= TimetableEntry.where(:subject_id=>subject.id,:timetable_id=>@timetable.id).count unless subject.max_weekly_classes.nil?
 
       #check for overlapping classes
-      overlap = TimetableEntry.find(:first,
-        :conditions => "timetable_id=#{@timetable.id} AND weekday_id = #{weekday} AND class_timing_id = #{class_timing} AND timetable_entries.employee_id = #{employee.id}", \
-          :joins=>"INNER JOIN subjects ON timetable_entries.subject_id = subjects.id INNER JOIN batches ON subjects.batch_id = batches.id AND batches.is_active = 1 AND batches.is_deleted = 0")
+          overlap = TimetableEntry.joins([:subject,:batch]).where("timetable_id = ? AND weekday_id = ? AND class_timing_id = ?  AND timetable_entries.employee_id = ? AND batches.is_active = true AND batches.is_deleted = false",@timetable.id,weekday,class_timing,employee.id).first
       unless overlap.nil?
         @overlap = overlap
         errors["messages"] << "#{t('class_overlap')}: #{overlap.batch.full_name}."
@@ -115,12 +113,12 @@ class TimetableEntriesController < ApplicationController
       # check for max_hour_day exceeded
       employee = subject.lower_day_grade unless subject.elective_group_id.nil?
       errors["messages"] << "#{t('max_hour_exceeded_day')}" \
-        if employee.max_hours_per_day <= TimetableEntry.count(:conditions => "timetable_entries.timetable_id=#{@timetable.id} AND timetable_entries.employee_id = #{employee.id} AND weekday_id = #{weekday}",:joins=>"INNER JOIN subjects ON timetable_entries.subject_id = subjects.id INNER JOIN batches ON subjects.batch_id = batches.id AND batches.is_active = 1 AND batches.is_deleted = 0") unless employee.max_hours_per_day.nil?
+        if employee.max_hours_per_day <= TimetableEntry.joins([:subject,:batch]).where("timetable_entries.timetable_id= ? AND timetable_entries.employee_id = ? AND weekday_id = ? AND batches.is_active = true AND batches.is_deleted = false",@timetable,employee.id,weekday).count unless employee.max_hours_per_day.nil?
 
       # check for max hours per week
       employee = subject.lower_week_grade unless subject.elective_group_id.nil?
       errors["messages"] << "#{t('max_hour_exceeded_week')}" \
-        if employee.max_hours_per_week <= TimetableEntry.count(:conditions => "timetable_entries.timetable_id=#{@timetable.id} AND timetable_entries.employee_id = #{employee.id}",:joins=>"INNER JOIN subjects ON timetable_entries.subject_id = subjects.id INNER JOIN batches ON subjects.batch_id = batches.id AND batches.is_active = 1 AND batches.is_deleted = 0") unless employee.max_hours_per_week.nil?
+        if employee.max_hours_per_week <= TimetableEntry.joins([:subject,:batch]).where("timetable_entries.timetable_id = ? AND timetable_entries.employee_id = ? AND batches.is_active = true AND batches.is_deleted = false",@timetable.id,employee.id).count unless employee.max_hours_per_week.nil?
 
       if errors["messages"].empty?
         unless tte.nil?
@@ -194,13 +192,13 @@ class TimetableEntriesController < ApplicationController
     if @weekday.empty?
       @weekday = Weekday.default
     end
-    timetable_entries=TimetableEntry.find(:all,:conditions=>{:batch_id=>@batch.id,:timetable_id=>@tt.id},:include=>[:subject,:employee])
+    timetable_entries=TimetableEntry.includes([:subject,:employee]).where(:batch_id=>@batch.id,:timetable_id=>@tt.id)
     @timetable= Hash.new { |h, k| h[k] = Hash.new(&h.default_proc)}
     timetable_entries.each do |tte|
       @timetable[tte.weekday_id][tte.class_timing_id]=tte
     end
-    @subjects = Subject.find_all_by_batch_id(@batch.id, :conditions=>["elective_group_id IS NULL AND is_deleted = false"])
-    @ele_subjects = Subject.find_all_by_batch_id(@batch.id, :conditions=>["elective_group_id IS NOT NULL AND is_deleted = false"], :group => "elective_group_id")
+    @subjects = Subject.where("batch_id = ? AND elective_group_id IS NULL AND is_deleted = false",@batch.id)
+    @ele_subjects = Subject.where("batch_id = ? AND elective_group_id IS NOT NULL AND is_deleted = false",@batch.id).group("elective_group_id","id")
   end
 
 end
