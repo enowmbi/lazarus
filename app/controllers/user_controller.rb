@@ -36,7 +36,7 @@ class UserController < ApplicationController
   
   def list_user
     if params[:user_type] == 'Admin'
-      @users = User.active.find(:all, :conditions => {:admin => true}, :order => 'first_name ASC')
+      @users = User.active.where(:admin => true).order('first_name ASC')
       render(:update) do |page|
         page.replace_html 'users', :partial=> 'users'
         page.replace_html 'employee_user', :text => ''
@@ -50,7 +50,7 @@ class UserController < ApplicationController
           page.replace_html 'users', :text => ''
           page.replace_html 'student_user', :text => ''
         else
-          @users = User.active.find_all_by_employee(1)
+          @users = User.active.where("employee= ?",true)
           page.replace_html 'users', :partial=> 'users'
           page.replace_html 'employee_user', :text => ''
           page.replace_html 'student_user', :text => ''
@@ -80,7 +80,7 @@ class UserController < ApplicationController
 
   def list_employee_user
     emp_dept = params[:dept_id]
-    @employee = Employee.find_all_by_employee_department_id(emp_dept, :order =>'first_name ASC')
+    @employee = Employee.where(:employee_department_id => emp_dept).order('first_name ASC')
     @users = @employee.collect { |employee| employee.user}
     @users.delete(nil)
     render(:update) {|page| page.replace_html 'users', :partial=> 'users'}
@@ -88,7 +88,7 @@ class UserController < ApplicationController
 
   def list_student_user
     batch = params[:batch_id]
-    @student = Student.find_all_by_batch_id(batch, :conditions => { :is_active => true },:order =>'first_name ASC')
+    @student = Student.where(:batch_id => batch,:is_active => true ).order('first_name ASC')
     @users = @student.collect { |student| student.user}
     @users.delete(nil)
     render(:update) {|page| page.replace_html 'users', :partial=> 'users'}
@@ -96,7 +96,7 @@ class UserController < ApplicationController
 
   def list_parent_user
     batch = params[:batch_id]
-    @guardian = Guardian.find(:all, :select=>'guardians.*',:joins=>'INNER JOIN students ON students.id = guardians.ward_id', :conditions => 'students.batch_id = ' + batch + ' AND is_active=1',:order =>'first_name ASC')
+    @guardian = Guardian.joins('INNER JOIN students ON students.id = guardians.ward_id').where("students.batch_id = ? AND is_active = true",batch).select('guardians.*').order("first_name ASC")
     users = @guardian.collect { |g| g.user}
     users.compact!
     @users  = users.paginate(:page=>params[:page],:per_page=>20)
@@ -166,7 +166,7 @@ class UserController < ApplicationController
   end
 
   def delete
-    @user = User.active.find_by_username(params[:id],:conditions=>"admin = 1")
+    @user = User.active.find_by_username(params[:id],:conditions=>"admin = true")
     unless @user.nil?
       if @user.employee_record.nil?
         flash[:notice] = "#{t('flash12')}" if @user.destroy
@@ -305,7 +305,7 @@ class UserController < ApplicationController
   end
 
   def reset_password
-    user = User.active.find_by_reset_password_code(params[:id],:conditions=>"reset_password_code IS NOT NULL")
+    user = User.active.where("id = ? AND reset_password_code = ? ",params[:id])
     if user
       if user.reset_password_code_until > Time.now
         redirect_to :action => 'set_new_password', :id => user.reset_password_code
@@ -323,12 +323,11 @@ class UserController < ApplicationController
     unless params[:query].nil? or params[:query].empty? or params[:query] == ' '
       #      if params[:query].length>= 3
       #        @user = User.first_name_or_last_name_or_username_begins_with params[:query].split
-      @user = User.active.find(:all,
-        :conditions => "(first_name LIKE \"#{params[:query]}%\"
+      #TODO concat
+      @user = User.active.where("(first_name LIKE \"#{params[:query]}%\"
                        OR last_name LIKE \"#{params[:query]}%\"
                        OR (concat(first_name, \" \", last_name) LIKE \"#{params[:query]}%\")
-                       OR username LIKE  \"#{params[:query]}\")",
-        :order => "first_name asc") unless params[:query] == ''
+                       OR username LIKE  \"#{params[:query]}\")").order("first_name asc") unless params[:query] == ''
       #      else
       #        @user = User.first_name_or_last_name_or_username_equals params[:query].split
       #      end
@@ -341,7 +340,7 @@ class UserController < ApplicationController
 
   def set_new_password
     if request.post?
-      user = User.active.find_by_reset_password_code(params[:id],:conditions=>"reset_password_code IS NOT NULL")
+    user = User.active.where("id = ? AND reset_password_code = ? ",params[:id])
       if user
         if params[:set_new_password][:new_password] === params[:set_new_password][:confirm_password]
           user.password = params[:set_new_password][:new_password]
@@ -367,12 +366,12 @@ class UserController < ApplicationController
     @finance = Config.find_by_config_value("Finance")
     @sms_setting = SmsSetting.application_sms_status
     @hr = Config.find_by_config_value("HR")
-    @privilege_tags=PrivilegeTag.find(:all,:order=>"priority ASC")
+    @privilege_tags=PrivilegeTag.order("priority ASC")
     @user_privileges=@user.privileges
     if request.post?
       new_privileges = params[:user][:privilege_ids] if params[:user]
       new_privileges ||= []
-      @user.privileges = Privilege.find_all_by_id(new_privileges)
+      @user.privileges = Privilege.where("id = ?",new_privileges)
       @user.clear_menu_cache
       flash[:notice] = "#{t('flash15')}"
       redirect_to :action => 'profile',:id => @user.username
