@@ -17,9 +17,9 @@
 #limitations under the License.
 
 class TimetableController < ApplicationController
-  before_filter :login_required
-  before_filter :protect_other_student_data
-  before_filter :default_time_zone_present_time
+  before_action :login_required
+  before_action :protect_other_student_data
+  before_action :default_time_zone_present_time
   filter_access_to :all
 
   def new_timetable
@@ -27,17 +27,17 @@ class TimetableController < ApplicationController
     if request.post?
       @timetable=Timetable.new(params[:timetable])
       @error=false
-      previous=Timetable.find(:all,:conditions=>["end_date >= ? AND start_date <= ?",@timetable.start_date,@timetable.start_date])
+      previous=Timetable.where("end_date >= ? AND start_date <= ?",@timetable.start_date,@timetable.start_date)
       unless previous.empty?
         @error=true
         @timetable.errors.add_to_base('start_date_overlap')
       end
-      conflicts=Timetable.find(:all,:conditions=>["end_date >= ? AND start_date <= ?",@timetable.end_date,@timetable.end_date])
+      conflicts=Timetable.where("end_date >= ? AND start_date <= ?",@timetable.end_date,@timetable.end_date)
       unless conflicts.empty?
         @error=true
         @timetable.errors.add_to_base('end_date_overlap')
       end
-      fully_overlapping=Timetable.find(:all,:conditions=>["end_date <= ? AND start_date >= ?",@timetable.end_date,@timetable.start_date])
+      fully_overlapping=Timetable.where("end_date <= ? AND start_date >= ?",@timetable.end_date,@timetable.start_date)
       unless fully_overlapping.empty?
         @error=true
         @timetable.errors.add_to_base('timetable_in_between_given_dates')
@@ -110,12 +110,12 @@ class TimetableController < ApplicationController
         @timetable.errors.add_to_base('end_date_is_lower_than_today')
       end
       #      @end_conflicts=Timetable.find(:all,:conditions=>["start_date <= ? AND id != ?",new_end,@tt.id])
-      @end_conflicts=Timetable.find(:all,:conditions=>["start_date <= ? AND end_date >= ? AND id != ?",new_end,new_start,@tt.id])
+      @end_conflicts=Timetable.where("start_date <= ? AND end_date >= ? AND id != ?",new_end,new_start,@tt.id)
       unless @end_conflicts.empty?
         @error=true
         @timetable.errors.add_to_base('end_date_overlap')
       end
-      fully_overlapping=Timetable.find(:all,:conditions=>["end_date <= ? AND start_date >= ?",@timetable.end_date,@timetable.start_date])
+      fully_overlapping=Timetable.where("end_date <= ? AND start_date >= ?",@timetable.end_date,@timetable.start_date)
       unless fully_overlapping.empty?
         @error=true
         @timetable.errors.add_to_base('timetable_in_between_given_dates')
@@ -177,13 +177,13 @@ class TimetableController < ApplicationController
 
   def edit_master
     @courses = Batch.active
-    @timetables=Timetable.find(:all,:conditions=>["end_date > ?",@local_tzone_time.to_date])
+    @timetables=Timetable.where("end_date > ?",@local_tzone_time.to_date)
   end
 
   def teachers_timetable
     @timetables=Timetable.all
     ## Prints out timetable of all teachers
-    @current=Timetable.find(:first,:conditions=>["timetables.start_date <= ? AND timetables.end_date >= ?",@local_tzone_time.to_date,@local_tzone_time.to_date])
+    @current=Timetable.where("timetables.start_date <= ? AND timetables.end_date >= ?",@local_tzone_time.to_date,@local_tzone_time.to_date).first
     if @current
       @timetable_entries = Hash.new { |l, k| l[k] = Hash.new(&l.default_proc) }
       @all_timetable_entries = @current.timetable_entries.select{|t| t.batch.is_active}.select{|s| s.class_timing.is_deleted==false}.select{|w| w.weekday.is_deleted==false}
@@ -216,7 +216,7 @@ class TimetableController < ApplicationController
   #    if request.xhr?
   def update_teacher_tt
     if params[:timetable_id].nil?
-      @current=Timetable.find(:first,:conditions=>["timetables.start_date <= ? AND timetables.end_date >= ?",@local_tzone_time.to_date,@local_tzone_time.to_date])
+      @current=Timetable.where("timetables.start_date <= ? AND timetables.end_date >= ?",@local_tzone_time.to_date,@local_tzone_time.to_date).first
     else
       if params[:timetable_id]==""
         render :update do |page|
@@ -265,7 +265,7 @@ class TimetableController < ApplicationController
     end
     @batch = Batch.find(params[:course_id])
     @tt = Timetable.find(params[:timetable_id])
-    @timetable = TimetableEntry.find_all_by_batch_id_and_timetable_id(@batch.id,@tt.id)
+    @timetable = TimetableEntry.where("batch_id =? AND timetable_id = ?",@batch.id,@tt.id)
     if @timetable.empty?
       render :update do |page|
         page.replace_html "timetable_view", :text => ""
@@ -281,7 +281,7 @@ class TimetableController < ApplicationController
     if @day.empty?
       @day = Weekday.default
     end
-    @timetable_entries=TimetableEntry.find(:all,:conditions=>{:batch_id=>@batch.id,:timetable_id=>@tt.id},:include=>[:subject,:employee])
+    @timetable_entries=TimetableEntry.includes([:subject,:employee]).where(:batch_id=>@batch.id,:timetable_id=>@tt.id)
     @timetable= Hash.new { |h, k| h[k] = Hash.new(&h.default_proc)}
     @timetable_entries.each do |tte|
       @timetable[tte.weekday_id][tte.class_timing_id]=tte
@@ -314,7 +314,7 @@ class TimetableController < ApplicationController
 
       @timetables=Timetable.all
       ## Prints out timetable of all teachers
-      @current=Timetable.find(:first,:conditions=>["timetables.start_date <= ? AND timetables.end_date >= ?",@local_tzone_time.to_date,@local_tzone_time.to_date])
+      @current=Timetable.where("timetables.start_date <= ? AND timetables.end_date >= ?",@local_tzone_time.to_date,@local_tzone_time.to_date]).first
       unless @current.nil?
         @electives=@employee.subjects.group_by(&:elective_group_id)
         @timetable_entries = Hash.new { |l, k| l[k] = Hash.new(&l.default_proc) }
@@ -324,8 +324,8 @@ class TimetableController < ApplicationController
         elective_subjects=electives.map{|x| x.elective_group.subjects.first}
         @employee_timetable_subjects = @employee_subjects.map {|sub| sub.elective_group_id.nil? ? sub : sub.elective_group.subjects.first}
         @entries=[]
-        @entries += @current.timetable_entries.find(:all,:conditions=>{:subject_id=>subjects,:employee_id => @employee.id})
-        @entries += @current.timetable_entries.find(:all,:conditions=>{:subject_id=>elective_subjects})
+        @entries += @current.timetable_entries.where(:subject_id=>subjects,:employee_id => @employee.id)
+        @entries += @current.timetable_entries.where(:subject_id=>elective_subjects)
         @all_timetable_entries = @entries.select{|t| t.batch.is_active}.select{|s| s.class_timing.is_deleted==false}.select{|w| w.weekday.is_deleted==false}
         @all_batches = @all_timetable_entries.collect(&:batch).uniq
         @all_weekdays = @all_timetable_entries.collect(&:weekday).uniq.sort!{|a,b| a.weekday <=> b.weekday}
@@ -347,7 +347,7 @@ class TimetableController < ApplicationController
   def update_employee_tt
     @employee=Employee.find(params[:employee_id])
     if params[:timetable_id].nil?
-      @current=Timetable.find(:first,:conditions=>["timetables.start_date <= ? AND timetables.end_date >= ?",@local_tzone_time.to_date,@local_tzone_time.to_date])
+      @current=Timetable.where("timetables.start_date <= ? AND timetables.end_date >= ?",@local_tzone_time.to_date,@local_tzone_time.to_date).first
     else
       if params[:timetable_id]==""
         render :update do |page|
@@ -366,8 +366,8 @@ class TimetableController < ApplicationController
     elective_subjects=electives.map{|x| x.elective_group.subjects.first}
     @employee_timetable_subjects = @employee_subjects.map {|sub| sub.elective_group_id.nil? ? sub : sub.elective_group.subjects.first}
     @entries=[]
-    @entries += @current.timetable_entries.find(:all,:conditions=>{:subject_id=>subjects,:employee_id => @employee.id})
-    @entries += @current.timetable_entries.find(:all,:conditions=>{:subject_id=>elective_subjects})
+    @entries += @current.timetable_entries.where(:subject_id=>subjects,:employee_id => @employee.id)
+    @entries += @current.timetable_entries.where(:subject_id=>elective_subjects)
     @all_timetable_entries = @entries.select{|t| t.batch.is_active}.select{|s| s.class_timing.is_deleted==false}.select{|w| w.weekday.is_deleted==false}
     @all_batches = @all_timetable_entries.collect(&:batch).uniq
     @all_weekdays = @all_timetable_entries.collect(&:weekday).uniq.sort!{|a,b| a.weekday <=> b.weekday}
@@ -385,10 +385,10 @@ class TimetableController < ApplicationController
     @student = Student.find(params[:id])
     @batch=@student.batch
     @timetables=Timetable.all
-    @current=Timetable.find(:first,:conditions=>["timetables.start_date <= ? AND timetables.end_date >= ?",@local_tzone_time.to_date,@local_tzone_time.to_date])
+    @current=Timetable.where("timetables.start_date <= ? AND timetables.end_date >= ?",@local_tzone_time.to_date,@local_tzone_time.to_date).first
     @timetable_entries = Hash.new { |l, k| l[k] = Hash.new(&l.default_proc) }
     unless @current.nil?
-      @entries=@current.timetable_entries.find(:all,:conditions=>{:batch_id=>@batch.id})
+      @entries=@current.timetable_entries.where(:batch_id=>@batch.id)
       @all_timetable_entries = @entries.select{|s| s.class_timing.is_deleted==false}.select{|w| w.weekday.is_deleted==false}
       @all_weekdays = @all_timetable_entries.collect(&:weekday).uniq.sort!{|a,b| a.weekday <=> b.weekday}
       @all_classtimings = @all_timetable_entries.collect(&:class_timing).uniq
@@ -403,7 +403,7 @@ class TimetableController < ApplicationController
     @student = Student.find(params[:id])
     @batch=@student.batch
     if params[:timetable_id].nil?
-      @current=Timetable.find(:first,:conditions=>["timetables.start_date <= ? AND timetables.end_date >= ?",@local_tzone_time.to_date,@local_tzone_time.to_date])
+      @current=Timetable.where("timetables.start_date <= ? AND timetables.end_date >= ?",@local_tzone_time.to_date,@local_tzone_time.to_date).first
     else
       if params[:timetable_id]==""
         render :update do |page|
@@ -438,7 +438,7 @@ class TimetableController < ApplicationController
   def timetable_pdf
     @batch = Batch.find(params[:course_id])
     @master = Timetable.find(params[:timetable_id])
-    @timetable = TimetableEntry.find_all_by_batch_id_and_timetable_id(@batch.id,params[:timetable_id])
+    @timetable = TimetableEntry.where("batch_id = ? AND timetable_id = ?",@batch.id,params[:timetable_id])
     @class_timing = ClassTiming.for_batch(@batch.id)
     if @class_timing.empty?
       @class_timing = ClassTiming.default
@@ -447,7 +447,7 @@ class TimetableController < ApplicationController
     if @day.empty?
       @day = Weekday.default
     end
-    @subjects = Subject.find_all_by_batch_id(@batch.id)
+    @subjects = Subject.where(:by_batch_id => @batch.id)
     @weekday = ["#{t('sun')}", "#{t('mon')}", "#{t('tue')}", "#{t('wed')}", "#{t('thu')}", "#{t('fri')}", "#{t('sat')}"]
     render :pdf=>'timetable_pdf'
 
@@ -460,7 +460,7 @@ class TimetableController < ApplicationController
     admin = EmployeeCategory.find_by_prefix('admin')
     admin_ids = []
     admin_ids << admin.id unless admin.nil?
-    @employees = Employee.all(:conditions=>["employee_category_id not in (?)",admin_ids],:include=>[:employee_grade,:employees_subjects])
+    @employees = Employee.includes([:employee_grade,:employees_subjects]).where("employee_category_id not in (?)",admin_ids)
     @emp_subs = []
     @employees.map{|employee| (employee[:total_time] = ((employee.max_hours_week).to_i))}
     if request.post?
@@ -472,11 +472,11 @@ class TimetableController < ApplicationController
         flash[:notice] = t('updated_with_errors')
       end
     end
-    @batches = Batch.active.scoped :include=>[{:subjects=>:employees},:course]
+    @batches = Batch.includes([{:subjects => :employees},:course]).active #TODO add .scoped
     @subjects = @batches.collect(&:subjects).flatten
   end
   def timetable
-    @config = Configuration.available_modules
+    @config = Config.available_modules
     @batches = Batch.active
     unless params[:next].nil?
       @today = params[:next].to_date
