@@ -17,7 +17,7 @@
 #limitations under the License.
 
 class ObservationGroupsController < ApplicationController
-  before_filter :login_required
+  before_action :login_required
   filter_access_to :all
   def index
     @obs_groups=ObservationGroup.active
@@ -78,7 +78,7 @@ class ObservationGroupsController < ApplicationController
   def create_observation
     @observation=Observation.new(params[:observation])
     @obs_group=ObservationGroup.find(params[:observation][:observation_group_id])
-    @observation.sort_order=@obs_group.observations.find(:last,:conditions=>{:is_active=>true},:order=>"sort_order ASC").try(:sort_order).to_i+1 || 1
+    @observation.sort_order=@obs_group.observations.where(:is_active=>true).order("sort_order ASC").last.try(:sort_order).to_i+1 || 1
     @observation.is_active=true
     if @observation.save
       @observations=@obs_group.observations.active
@@ -125,7 +125,7 @@ class ObservationGroupsController < ApplicationController
     @course=Course.find(params[:id])
     new_observation_groups = params[:course][:observation_group_ids] if params[:course]
     new_observation_groups ||= []
-    @course.observation_groups = ObservationGroup.find_all_by_id(new_observation_groups)
+    @course.observation_groups = ObservationGroup.where("id = ?",new_observation_groups)
     @course_observation_groups=@course.observation_groups
     @obs_groups=ObservationGroup.all
     flash[:notice] = "Co-Scholastic groups successfully assigned to the selected course."
@@ -140,7 +140,7 @@ class ObservationGroupsController < ApplicationController
     else
       flash[:notice]="Co-Scholastic criteria could not be deleted"
     end
-    @observations=@obs_group.observations.find(:all,:conditions=>{:is_active=>true},:order=>"sort_order ASC")
+    @observations=@obs_group.observations.where(:is_active=>true).order("sort_order ASC")
     render(:update) do |page|
       page.replace_html 'flash-box', :text=>"<p class='flash-msg'>#{flash[:notice]}</p>" unless flash[:notice].nil?
       page.replace_html 'observations', :partial => 'observations', :object => @observations
@@ -151,7 +151,7 @@ class ObservationGroupsController < ApplicationController
     if request.post?
       observation=Observation.find(params[:id])
       obs_group=observation.observation_group
-      swap=obs_group.observations.find(:all,:conditions=>{:is_active=>true},:order=>"sort_order ASC")
+      swap=obs_group.observations.where(:is_active=>true).order("sort_order ASC")
       initial=params[:count].to_i
       src=swap[initial]
       if params[:direction]=='up'
