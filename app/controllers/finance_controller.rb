@@ -17,11 +17,11 @@
 #limitations under the License.
 
 class FinanceController < ApplicationController
-  before_filter :login_required,:configuration_settings_for_finance
+  before_action :login_required,:configuration_settings_for_finance
   filter_access_to :all
   
   def index
-    @hr = Configuration.find_by_config_value("HR")
+    @hr = Config.find_by_config_value("HR")
   end
   
   def automatic_transactions
@@ -30,7 +30,7 @@ class FinanceController < ApplicationController
       @cat_names << "'#{category[:category_name]}'"
     end
     @triggers = FinanceTransactionTrigger.all
-    @categories = FinanceTransactionCategory.find(:all ,:conditions => ["name NOT IN (#{@cat_names.join(',')}) and is_income=1 and deleted=0 "])
+    @categories = FinanceTransactionCategory.where("name NOT IN (?) AND is_income = true AND deleted= false ",@cat_names.join(','))
   end
   
   def donation
@@ -68,13 +68,13 @@ class FinanceController < ApplicationController
 
   def donation_receipt_pdf
     @donation = FinanceDonation.find(params[:id])
-    @currency_type = Configuration.find_by_config_key("CurrencyType").config_value
+    @currency_type = Config.find_by_config_key("CurrencyType").config_value
     render :pdf => 'donation_receipt_pdf'
     
   end
 
   def donors
-    @donations = FinanceDonation.find(:all, :order => 'transaction_date desc')
+    @donations = FinanceDonation.order('transaction_date desc')
   end
 
   def expense_create
@@ -96,7 +96,7 @@ class FinanceController < ApplicationController
 
   def expense_edit
     @transaction = FinanceTransaction.find(params[:id])
-    @categories = FinanceTransactionCategory.all(:conditions =>"name != 'Salary' and is_income = false" )
+    @categories = FinanceTransactionCategory.where("name != 'Salary' and is_income = false")
     if request.post? and @transaction.update_attributes(params[:transaction])
       flash[:notice] = "#{t('flash4')}"
       redirect_to  :action=>:expense_list
@@ -117,7 +117,7 @@ class FinanceController < ApplicationController
   end
 
   def expense_list_pdf
-    @currency_type = Configuration.find_by_config_key("CurrencyType").config_value
+    @currency_type = Config.find_by_config_key("CurrencyType").config_value
     @start_date = (params[:start_date]).to_date
     @end_date = (params[:end_date]).to_date
     @expenses = FinanceTransaction.expenses(@start_date,@end_date)
@@ -151,7 +151,7 @@ class FinanceController < ApplicationController
       @cat_names << "'#{category[:category_name]}'"
     end
     @transaction = FinanceTransaction.find(params[:id])
-    @categories = FinanceTransactionCategory.all(:conditions => "is_income=true and name NOT IN (#{@cat_names.join(',')})")
+    @categories = FinanceTransactionCategory.where("is_income=true and name NOT IN (?)",@cat_names.join(','))
     if request.post? and @transaction.update_attributes(params[:transaction])
       flash[:notice] = "#{t('flash7')}"
       redirect_to :action=> 'income_list'
@@ -165,7 +165,7 @@ class FinanceController < ApplicationController
     @transaction = FinanceTransaction.find_by_id(params[:id])
     income = @transaction.category.is_income?
     if income
-      auto_transactions = FinanceTransaction.find_all_by_master_transaction_id(params[:id])
+      auto_transactions = FinanceTransaction.where(:master_transaction_id => params[:id])
       auto_transactions.each { |a| a.destroy } unless auto_transactions.nil?
     end
     @transaction.destroy
@@ -189,11 +189,11 @@ class FinanceController < ApplicationController
     @start_date = params[:start].to_date
     @end_date = params[:end].to_date
     @income_category = FinanceTransactionCategory.find(params[:id])
-    @incomes = @income_category.finance_transactions.find(:all,:conditions => ["transaction_date >= '#{@start_date}' and transaction_date <= '#{@end_date}'"])
+    @incomes = @income_category.finance_transactions.where("transaction_date >= ? AND transaction_date <= ?",@start_date,@end_date)
   end
 
   def income_list_pdf
-    @currency_type = Configuration.find_by_config_key("CurrencyType").config_value
+    @currency_type = Config.find_by_config_key("CurrencyType").config_value
     @start_date = (params[:start_date]).to_date
     @end_date = (params[:end_date]).to_date
     @incomes = FinanceTransaction.incomes(@start_date,@end_date)
@@ -204,12 +204,12 @@ class FinanceController < ApplicationController
     @start_date = params[:start_date].to_date
     @end_date = params[:end_date].to_date
     @income_category = FinanceTransactionCategory.find(params[:id])
-    @incomes = @income_category.finance_transactions.find(:all,:conditions => ["transaction_date >= '#{@start_date}' and transaction_date <= '#{@end_date}'"])
+    @incomes = @income_category.finance_transactions.where("transaction_date >= ? AND transaction_date <= ?",@start_date,@end_date)
     render :pdf => 'income_details_pdf'
   end
 
   def categories
-    @categories = FinanceTransactionCategory.all(:conditions => {:deleted => false},:order=>'name asc')
+    @categories = FinanceTransactionCategory.where(:deleted => false).order('name asc')
     @fixed_categories = @categories.reject{|c|!c.is_fixed}
     @other_categories = @categories.reject{|c|c.is_fixed}
   end
@@ -222,7 +222,7 @@ class FinanceController < ApplicationController
     @finance_category = FinanceTransactionCategory.new(params[:finance_category])
     render :update do |page|
       if @finance_category.save
-        @categories = FinanceTransactionCategory.all(:conditions => {:deleted => false})
+        @categories = FinanceTransactionCategory.where(:deleted => false)
         @fixed_categories = @categories.reject{|c|!c.is_fixed}
         @other_categories = @categories.reject{|c|c.is_fixed}
         page.replace_html 'form-errors', :text => ''
@@ -240,20 +240,20 @@ class FinanceController < ApplicationController
   def category_delete
     @finance_category = FinanceTransactionCategory.find(params[:id])
     @finance_category.update_attributes(:deleted => true)
-    @categories = FinanceTransactionCategory.all(:conditions => {:deleted => false})
+    @categories = FinanceTransactionCategory.where(:deleted => false)
     @fixed_categories = @categories.reject{|c|!c.is_fixed}
     @other_categories = @categories.reject{|c|c.is_fixed}
   end
 
   def category_edit
     @finance_category = FinanceTransactionCategory.find(params[:id])
-    @categories = FinanceTransactionCategory.all(:conditions => {:deleted => false})
+    @categories = FinanceTransactionCategory.where(:deleted => false)
   end
 
   def category_update
     @finance_category = FinanceTransactionCategory.find(params[:id])
     @finance_category.update_attributes(params[:finance_category])
-    @categories = FinanceTransactionCategory.all(:conditions => {:deleted => false})
+    @categories = FinanceTransactionCategory.where(:deleted => false)
     @fixed_categories = @categories.reject{|c|!c.is_fixed}
     @other_categories = @categories.reject{|c|c.is_fixed}
   end
@@ -284,7 +284,7 @@ class FinanceController < ApplicationController
       @cat_names << "'#{category[:category_name]}'"
     end
     @transaction_trigger = FinanceTransactionTrigger.find(params[:id])
-    @categories = FinanceTransactionCategory.find(:all ,:conditions => ["name NOT IN (#{@cat_names.join(',')}) and is_income=1 and deleted=0 "])
+    @categories = FinanceTransactionCategory.where("name NOT IN (?) AND is_income= true AND deleted= false ",@cat_names.join(','))
   end
 
   def transaction_trigger_update
@@ -319,14 +319,12 @@ class FinanceController < ApplicationController
   
   def update_monthly_report
     fixed_category_name
-    @hr = Configuration.find_by_config_value("HR")
+    @hr = Config.find_by_config_value("HR")
     @start_date = (params[:start_date]).to_date
     @end_date = (params[:end_date]).to_date
-    @transactions = FinanceTransaction.find(:all,
-      :order => 'transaction_date desc', :conditions => ["transaction_date >= '#{@start_date}' and transaction_date <= '#{@end_date}'"])
+    @transactions = FinanceTransaction.where("transaction_date >= ? AND transaction_date <= ?",@start_date,@end_date).order('transaction_date desc')
     #@other_transactions = FinanceTransaction.report(@start_date,@end_date,params[:page])
-    @other_transaction_categories = FinanceTransaction.find(:all,params[:page], :conditions => ["transaction_date >= '#{@start_date}' and transaction_date <= '#{@end_date}'and category_id NOT IN (#{@fixed_cat_ids.join(",")})"],
-      :order => 'transaction_date').map{|ft| ft.category}.uniq
+    @other_transaction_categories = FinanceTransaction.where("id = ? AND transaction_date >= ? AND transaction_date <= ? AND category_id NOT IN (?)",params[:page],@start_date,@end_date,@fixed_cat_ids.join(",")).order('transaction_date').map{|ft| ft.category}.uniq
     @transactions_fees = FinanceTransaction.total_fees(@start_date,@end_date)
     @salary = MonthlyPayslip.total_employees_salary(@start_date, @end_date)#Employee.total_employees_salary(employees, @start_date, @end_date)
     @donations_total = FinanceTransaction.donations_triggers(@start_date,@end_date)
@@ -340,14 +338,12 @@ class FinanceController < ApplicationController
   
   def transaction_pdf
     fixed_category_name
-    @hr = Configuration.find_by_config_value("HR")
+    @hr = Config.find_by_config_value("HR")
     @start_date = (params[:start_date]).to_date
     @end_date = (params[:end_date]).to_date
-    @transactions = FinanceTransaction.find(:all,
-      :order => 'transaction_date desc', :conditions => ["transaction_date >= '#{@start_date}' and transaction_date <= '#{@end_date}'"])
+    @transactions = FinanceTransaction.where("transaction_date >= ? AND transaction_date <= ?",@start_date,@end_date).order('transaction_date desc')
     #@other_transactions = FinanceTransaction.report(@start_date,@end_date,params[:page])
-    @other_transaction_categories = FinanceTransaction.find(:all,params[:page], :conditions => ["transaction_date >= '#{@start_date}' and transaction_date <= '#{@end_date}'and category_id NOT IN (#{@fixed_cat_ids.join(",")})"],
-      :order => 'transaction_date').map{|ft| ft.category}.uniq
+    @other_transaction_categories = FinanceTransaction.where("id = ? AND transaction_date >= ? AND transaction_date <= ? AND category_id NOT IN (?)",params[:page],@start_date,@end_date,@fixed_cat_ids.join(",")).order('transaction_date').map{|ft| ft.category}.uniq
     @transactions_fees = FinanceTransaction.total_fees(@start_date,@end_date)
     @salary = MonthlyPayslip.total_employees_salary(@start_date, @end_date)[:total_salary]#Employee.total_employees_salary(employees, @start_date, @end_date)
     @donations_total = FinanceTransaction.donations_triggers(@start_date,@end_date)
@@ -361,7 +357,7 @@ class FinanceController < ApplicationController
 
   def salary_department
     month_date
-    @departments = EmployeeDepartment.find(:all)
+    @departments = EmployeeDepartment.all
   end
 
   def salary_employee
@@ -375,7 +371,7 @@ class FinanceController < ApplicationController
     
     @salary_date = params[:id2]
     @employee = Employee.find_in_active_or_archived(params[:id])
-    @currency_type = Configuration.find_by_config_key("CurrencyType").config_value
+    @currency_type = Config.find_by_config_key("CurrencyType").config_value
     
     if params[:salary_date] == ""
       render :update do |page|
@@ -383,8 +379,8 @@ class FinanceController < ApplicationController
       end
       return
     end
-    @monthly_payslips = MonthlyPayslip.find(:all,:conditions=>["employee_id=? AND salary_date = ?",params[:id],@salary_date],:include=>:payroll_category)
-    @individual_payslips =  IndividualPayslipCategory.find(:all,:conditions=>["employee_id=? AND salary_date = ?",params[:id],@salary_date])
+    @monthly_payslips = MonthlyPayslip.includes(:payroll_category).where("employee_id = ? AND salary_date = ?",params[:id],@salary_date)
+    @individual_payslips =  IndividualPayslipCategory.where("employee_id=? AND salary_date = ?",params[:id],@salary_date)
     @salary  = Employee.calculate_salary(@monthly_payslips, @individual_payslips)
    
   end
@@ -392,22 +388,21 @@ class FinanceController < ApplicationController
   def donations_report
     month_date
     category_id = FinanceTransactionCategory.find_by_name("Donation").id
-    @donations = FinanceTransaction.find(:all,:order => 'transaction_date desc', :conditions => ["transaction_date >= '#{@start_date}' and transaction_date <= '#{@end_date}'and category_id ='#{category_id}'"])
+    @donations = FinanceTransaction.where("transaction_date >= ? AND transaction_date <= ? AND category_id =?",@start_date,@end_date,category_id).order('transaction_date desc')
     
   end
 
   def fees_report
     month_date
     fees_id = FinanceTransactionCategory.find_by_name('Fee').id
-    @fee_collection = FinanceFeeCollection.find(:all,:joins=>"INNER JOIN finance_fees ON finance_fees.fee_collection_id = finance_fee_collections.id INNER JOIN finance_transactions ON finance_transactions.finance_id = finance_fees.id AND finance_transactions.transaction_date >= '#{@start_date}' AND finance_transactions.transaction_date <= '#{@end_date}' AND finance_transactions.category_id = #{fees_id}",:group=>"finance_fee_collections.id")
-    
+    @fee_collection = FinanceFeeCollection.joins([:finance_fees,:finance_transactions]).where("finance_transactions.transaction_date >= ? AND finance_transactions.transaction_date <= ? AND finance_transactions.category_id = ?",@start_date,@end_date,fees_id).group("finance_fee_collections.id") 
   end
 
   def batch_fees_report
     month_date
     @fee_collection = FinanceFeeCollection.find(params[:id])
     @batch = @fee_collection.batch
-    @transaction = @fee_collection.finance_transactions.all(:conditions=>"transaction_date >= '#{@start_date}' AND transaction_date <= '#{@end_date}'")
+    @transaction = @fee_collection.finance_transactions.where("transaction_date >= ? AND transaction_date <= ?",@start_date,@end_date)
   end
 
   def student_fees_structure
@@ -421,12 +416,12 @@ class FinanceController < ApplicationController
   # approve montly payslip ----------------------
 
   def approve_monthly_payslip
-    @salary_dates = MonthlyPayslip.find(:all, :select => "distinct salary_date")
+    @salary_dates = MonthlyPayslip.select("distinct salary_date")
     
   end
 
   def one_click_approve
-    @dates = MonthlyPayslip.find_all_by_salary_date(params[:salary_date],:conditions => ["is_approved = false"])
+    @dates = MonthlyPayslip.where("salary_date = ? AND is_approved = false",params[:salary_date])
     @salary_date = params[:salary_date]
     render :update do |page|
       page.replace_html "approve",:partial=> "one_click_approve"
@@ -434,13 +429,14 @@ class FinanceController < ApplicationController
   end
 
   def one_click_approve_submit
-    dates = MonthlyPayslip.find_all_by_salary_date(Date.parse(params[:date]), :conditions=>["is_rejected is false"])
+    dates = MonthlyPayslip.where("salary_date = ? AND is_rejected is false",Date.parse(params[:date]))
 
     dates.each do |d|
       d.approve(current_user.id,"Approved")
     end
 
     emp_ids = dates.map{|date| date.employee_id }.uniq.join(',')
+    #TODO use sidekiq
     Delayed::Job.enqueue(PayslipTransactionJob.new(
         :salary_date => params[:date],
         :employee_id => emp_ids
@@ -448,15 +444,14 @@ class FinanceController < ApplicationController
 
     flash[:notice] = "#{t('flash8')}"
     redirect_to :action => "index"
-
-    
   end
 
   def employee_payslip_approve
-    dates = MonthlyPayslip.find_all_by_salary_date_and_employee_id(Date.parse(params[:id2]),params[:id])
+    dates = MonthlyPayslip.where("salary_date = ? AND employee_id = ?",Date.parse(params[:id2]),params[:id])
     dates.each do |d|
       d.approve(current_user.id,params[:payslip_accept][:remark])
     end
+    #TODO 'use sidekiq'
     Delayed::Job.enqueue(PayslipTransactionJob.new(
         :salary_date => params[:id2],
         :employee_id => params[:id]
@@ -467,7 +462,7 @@ class FinanceController < ApplicationController
     end
   end
   def employee_payslip_reject
-    dates = MonthlyPayslip.find_all_by_salary_date_and_employee_id(Date.parse(params[:id2]),params[:id])
+    dates = MonthlyPayslip.where("salary_date = ? AND employee_id = ?",Date.parse(params[:id2]),params[:id])
     employee = Employee.find(params[:id])
 
     dates.each do |d|
@@ -477,6 +472,7 @@ class FinanceController < ApplicationController
     hr_ids = privilege.user_ids
     subject = "#{t('payslip_rejected')}"
     body = "#{t('payslip_rejected_for')} "+ employee.first_name+" "+ employee.last_name+ " (#{t('employee_number')} : #{employee.employee_number})" +" #{t('for_the_month')} #{params[:id2].to_date.strftime("%B %Y")}"
+    #TODO 'use sidekiq'
     Delayed::Job.enqueue(DelayedReminderJob.new( :sender_id  => current_user.id,
         :recipient_ids => hr_ids,
         :subject=>subject,
@@ -505,8 +501,8 @@ class FinanceController < ApplicationController
   #view monthly payslip -------------------------------
   def view_monthly_payslip
     
-    @departments = EmployeeDepartment.find(:all, :conditions=>"status = true", :order=> "name ASC")
-    @salary_dates = MonthlyPayslip.find(:all,:select => "distinct salary_date")
+    @departments = EmployeeDepartment.where("status = true").order("name ASC")
+    @salary_dates = MonthlyPayslip.select("distinct salary_date")
     if request.post?
       post_data = params[:payslip]
       unless post_data.blank?
@@ -524,10 +520,10 @@ class FinanceController < ApplicationController
   def view_employee_payslip
     @is_present_employee=true
     @is_present_employee=false if (Employee.find_by_id(params[:id]).nil?)
-    @monthly_payslips = MonthlyPayslip.find(:all,:conditions=>["employee_id=? AND salary_date = ?",params[:id],params[:salary_date]],:include=>:payroll_category)
-    @individual_payslips =  IndividualPayslipCategory.find(:all,:conditions=>["employee_id=? AND salary_date = ?",params[:id],params[:salary_date]])
+    @monthly_payslips = MonthlyPayslip.includes(:payroll_category).where("employee_id=? AND salary_date = ?",params[:id],params[:salary_date])
+    @individual_payslips =  IndividualPayslipCategory.where("employee_id=? AND salary_date = ?",params[:id],params[:salary_date])
     @salary  = Employee.calculate_salary(@monthly_payslips, @individual_payslips)
-    @currency_type= Configuration.find_by_config_key("CurrencyType").config_value
+    @currency_type= Config.find_by_config_key("CurrencyType").config_value
   end
  
   
@@ -538,16 +534,12 @@ class FinanceController < ApplicationController
     other_conditions += " AND employee_position_id = '#{params[:employee_position_id]}'" unless params[:employee_position_id] == ""
     other_conditions += " AND employee_grade_id = '#{params[:employee_grade_id]}'" unless params[:employee_grade_id] == ""
     if params[:query].length>= 3
-      @employee = Employee.find(:all,
-        :conditions => ["(first_name LIKE ? OR middle_name LIKE ? OR last_name LIKE ?
+      @employee = Employee.where("(first_name LIKE ? OR middle_name LIKE ? OR last_name LIKE ?
                        OR employee_number LIKE ? OR (concat(first_name, \" \", last_name) LIKE ?))" + other_conditions,
           "#{params[:query]}%","#{params[:query]}%","#{params[:query]}%",
-          "#{params[:query]}", "#{params[:query]}"],
-        :order => "first_name asc") unless params[:query] == ''
+          "#{params[:query]}", "#{params[:query]}").order("first_name asc") unless params[:query] == ''
     else
-      @employee = Employee.find(:all,
-        :conditions => ["(employee_number LIKE ?)" + other_conditions,"#{params[:query]}%"],
-        :order => "first_name asc") unless params[:query] == ''
+      @employee = Employee.where("(employee_number LIKE ?)" + other_conditions,"#{params[:query]}%").order("first_name asc") unless params[:query] == ''
     end
     render :layout => false
   end
@@ -575,7 +567,7 @@ class FinanceController < ApplicationController
 
   def update_liability
     @liability = Liability.find(params[:id])
-    @currency_type = Configuration.find_by_config_key("CurrencyType").config_value
+    @currency_type = Config.find_by_config_key("CurrencyType").config_value
     
     render :update do |page|
       if @liability.update_attributes(params[:liability])
@@ -591,21 +583,21 @@ class FinanceController < ApplicationController
   end
 
   def view_liability
-    @liabilities = Liability.find(:all,:conditions => 'is_deleted = 0')
-    @currency_type = Configuration.find_by_config_key("CurrencyType").config_value
+    @liabilities = Liability.where('is_deleted = false')
+    @currency_type = Config.find_by_config_key("CurrencyType").config_value
   end
   
   def liability_pdf
-    @liabilities = Liability.find(:all,:conditions => 'is_deleted = 0')
-    @currency_type = Configuration.find_by_config_key("CurrencyType").config_value
+    @liabilities = Liability.where('is_deleted = false')
+    @currency_type = Config.find_by_config_key("CurrencyType").config_value
     render :pdf => 'liability_report_pdf'
   end
 
   def delete_liability
     @liability = Liability.find(params[:id])
     @liability.update_attributes(:is_deleted => true)
-    @liabilities = Liability.find(:all ,:conditions => 'is_deleted = 0')
-    @currency_type = Configuration.find_by_config_key("CurrencyType").config_value
+    @liabilities = Liability.where('is_deleted = false')
+    @currency_type = Config.find_by_config_key("CurrencyType").config_value
     render :update do |page|
       page.replace_html "liability_list", :partial => "liability_list"
       page.replace_html 'flash_box', :text => "<p class='flash-msg'>#{t('flash_msg25')}</p>"
@@ -614,7 +606,7 @@ class FinanceController < ApplicationController
 
   def each_liability_view
     @liability = Liability.find(params[:id])
-    @currency_type = Configuration.find_by_config_key("CurrencyType").config_value
+    @currency_type = Config.find_by_config_key("CurrencyType").config_value
   end
 
   def create_asset
@@ -633,13 +625,13 @@ class FinanceController < ApplicationController
   end
 
   def view_asset
-    @assets = Asset.find(:all,:conditions => 'is_deleted = 0')
-    @currency_type = Configuration.find_by_config_key("CurrencyType").config_value
+    @assets = Asset.where('is_deleted = false')
+    @currency_type = Config.find_by_config_key("CurrencyType").config_value
   end
 
   def asset_pdf
-    @assets = Asset.find(:all,:conditions => 'is_deleted = 0')
-    @currency_type = Configuration.find_by_config_key("CurrencyType").config_value
+    @assets = Asset.where('is_deleted = false')
+    @currency_type = Config.find_by_config_key("CurrencyType").config_value
     render :pdf => 'asset_report_pdf'
   end
 
@@ -649,11 +641,11 @@ class FinanceController < ApplicationController
 
   def update_asset
     @asset = Asset.find(params[:id])
-    @currency_type = Configuration.find_by_config_key("CurrencyType").config_value
+    @currency_type = Config.find_by_config_key("CurrencyType").config_value
     
     render :update do |page|
       if @asset.update_attributes(params[:asset])
-        @assets = Asset.find(:all,:conditions => 'is_deleted = 0')
+        @assets = Asset.where('is_deleted = false')
         page.replace_html "asset_list", :partial => "asset_list"
         page << "Modalbox.hide();"
         page.replace_html 'flash_box', :text => "<p class='flash-msg'>#{t('flash_msg21')}</p>"
@@ -667,8 +659,8 @@ class FinanceController < ApplicationController
   def delete_asset
     @asset = Asset.find(params[:id])
     @asset.update_attributes(:is_deleted => true)
-    @assets = Asset.all(:conditions => 'is_deleted = 0')
-    @currency_type = Configuration.find_by_config_key("CurrencyType").config_value
+    @assets = Asset.where('is_deleted = false')
+    @currency_type = Config.find_by_config_key("CurrencyType").config_value
     render :update do |page|
       page.replace_html "asset_list", :partial => "asset_list"
       page.replace_html 'flash_box', :text => "<p class='flash-msg'>#{t('flash_msg22')}</p>"
@@ -677,7 +669,7 @@ class FinanceController < ApplicationController
 
   def each_asset_view
     @asset = Asset.find(params[:id])
-    @currency_type = Configuration.find_by_config_key("CurrencyType").config_value
+    @currency_type = Config.find_by_config_key("CurrencyType").config_value
   end
   #fees ----------------
 
@@ -685,7 +677,7 @@ class FinanceController < ApplicationController
     @finance_fee_category = FinanceFeeCategory.new
     @finance_fee_particular = FinanceFeeParticular.new
     @batchs = Batch.active
-    @master_categories = FinanceFeeCategory.find(:all,:conditions=> ["is_deleted = '#{false}' and is_master = 1 and batch_id=?",params[:batch_id]]) unless params[:batch_id].blank?
+    @master_categories = FinanceFeeCategory.where("is_deleted = false AND is_master = true and batch_id=?",params[:batch_id]) unless params[:batch_id].blank?
     @student_categories = StudentCategory.active
   end
   
@@ -718,7 +710,7 @@ class FinanceController < ApplicationController
         @finance_fee_category.valid?
         @error = true
       end
-      @master_categories = FinanceFeeCategory.find(:all,:conditions=> ["is_deleted = '#{false}' and is_master = 1"])
+      @master_categories = FinanceFeeCategory.where("is_deleted = false AND is_master = true")
       respond_to do |format|
         format.js { render :action => 'master_category_create' }
       end
@@ -736,7 +728,7 @@ class FinanceController < ApplicationController
     @finance_fee_category = FinanceFeeCategory.find(params[:id])
     render :update do |page|
       if @finance_fee_category.update_attributes(params[:finance_fee_category])
-        @master_categories = FinanceFeeCategory.find(:all, :conditions =>["is_deleted = '#{false}' and is_master = 1 and batch_id = #{@finance_fee_category.batch_id}"])
+        @master_categories = FinanceFeeCategory.where("is_deleted = false AND is_master = true and batch_id = ?",@finance_fee_category.batch_id)
         page.replace_html 'form-errors', :text => ''
         page << "Modalbox.hide();"
         page.replace_html 'categories', :partial => 'master_category_list'
@@ -750,7 +742,7 @@ class FinanceController < ApplicationController
 
   def master_category_particulars
     @finance_fee_category = FinanceFeeCategory.find(params[:id])
-    @particulars = FinanceFeeParticular.paginate(:page => params[:page],:conditions => ["is_deleted = '#{false}' and finance_fee_category_id = '#{@finance_fee_category.id}' "])
+    @particulars = FinanceFeeParticular.where("is_deleted = false AND finance_fee_category_id = ?",@finance_fee_category.id).paginate(:page => params[:page])
   end
   def master_category_particulars_edit
     @finance_fee_particular= FinanceFeeParticular.find(params[:id])
@@ -766,7 +758,7 @@ class FinanceController < ApplicationController
       params[:finance_fee_particular][:student_category_id]="" if params[:finance_fee_particular][:student_category_id].nil?
       if @feeparticulars.update_attributes(params[:finance_fee_particular])
         @finance_fee_category = FinanceFeeCategory.find(@feeparticulars.finance_fee_category_id)
-        @particulars = FinanceFeeParticular.paginate(:page => params[:page],:conditions => ["is_deleted = '#{false}' and finance_fee_category_id = '#{@finance_fee_category.id}' "])
+        @particulars = FinanceFeeParticular.where("is_deleted = false AND finance_fee_category_id = ?",@finance_fee_category.id).paginate(:page => params[:page])
         page.replace_html 'form-errors', :text => ''
         page << "Modalbox.hide();"
         page.replace_html 'categories', :partial => 'master_particulars_list'
@@ -784,7 +776,7 @@ class FinanceController < ApplicationController
     @feeparticulars = FinanceFeeParticular.find( params[:id])
     @feeparticulars.update_attributes(:is_deleted => true )
     @finance_fee_category = FinanceFeeCategory.find(@feeparticulars.finance_fee_category_id)
-    @particulars = FinanceFeeParticular.paginate(:page => params[:page],:conditions => ["is_deleted = '#{false}' and finance_fee_category_id = '#{@finance_fee_category.id}' "])
+    @particulars = FinanceFeeParticular.where("is_deleted = false AND finance_fee_category_id = ?",@finance_fee_category.id).paginate(:page => params[:page])
     respond_to do |format|
       format.js { render :action => 'master_category_particulars' }
     end
@@ -793,7 +785,7 @@ class FinanceController < ApplicationController
     @finance_fee_category = FinanceFeeCategory.find(params[:id])
     @finance_fee_category.update_attributes(:is_deleted => true)
     @finance_fee_category.delete_particulars
-    @master_categories = FinanceFeeCategory.find(:all, :conditions =>["is_deleted = '#{false}' and is_master = 1 and batch_id = #{@finance_fee_category.batch_id}"])
+    @master_categories = FinanceFeeCategory.where("is_deleted = false AND is_master = true and batch_id = ?",@finance_fee_category.batch_id)
     respond_to do |format|
       format.js { render :action => 'master_category_delete' }
     end
@@ -804,7 +796,7 @@ class FinanceController < ApplicationController
       @finance_fee_category = FinanceFeeCategory.new
       @finance_fee_particular = FinanceFeeParticular.new
       @batches = Batch.find params[:id] unless params[:id] == ""
-      @master_categories = FinanceFeeCategory.find(:all,:conditions=> ["is_deleted = '#{false}' and is_master = 1 and batch_id=?",params[:id]])
+      @master_categories = FinanceFeeCategory.where("is_deleted = false' AND is_master = true and batch_id=?",params[:id])
       @student_categories = StudentCategory.active
 
       render :update do |page|
@@ -814,14 +806,14 @@ class FinanceController < ApplicationController
   end
 
   def fees_particulars_new
-    @fees_categories = FinanceFeeCategory.find(:all ,:conditions=> "is_deleted = 0 and is_master = 1", :order=>"name ASC")
+    @fees_categories = FinanceFeeCategory.where("is_deleted = false and is_master = true").order("name ASC")
     @fees_categories.reject!{|f|f.batch.is_deleted or !f.batch.is_active }
     @student_categories = StudentCategory.active
   end
 
   def fees_particulars_create
     @error = false
-    finance_fee_categories = FinanceFeeCategory.find_all_by_id(params[:finance_fee_particular][:finance_fee_category_ids].reject{|cat| cat.empty?}.map{|cat| cat.to_i}) unless params[:finance_fee_particular][:finance_fee_category_ids].blank?
+    finance_fee_categories = FinanceFeeCategory.where(:id => params[:finance_fee_particular][:finance_fee_category_ids].reject{|cat| cat.empty?}.map{|cat| cat.to_i}) unless params[:finance_fee_particular][:finance_fee_category_ids].blank?
     unless finance_fee_categories.blank?
       batches = finance_fee_categories.map{|ffc| ffc.batch}
       posted_params = params[:finance_fee_particular]
@@ -861,11 +853,11 @@ class FinanceController < ApplicationController
           @error = true unless @finance_fee_particular.save
         end
       end
-      @particulars = FinanceFeeParticular.all(:conditions => {:is_deleted => false,:finance_fee_category_id => finance_fee_categories.map{|ffc| ffc.id}})
+      @particulars = FinanceFeeParticular.where(:is_deleted => false,:finance_fee_category_id => finance_fee_categories.map{|ffc| ffc.id})
       if @error.blank?
         flash[:notice] = t('particulars_created_successfully')
       else
-        @fees_categories = FinanceFeeCategory.find(:all ,:conditions=> "is_deleted = 0 and is_master = 1")
+        @fees_categories = FinanceFeeCategory.where(:is_deleted => false,:is_master => true)
         @fees_categories.reject!{|f|f.batch.is_deleted or !f.batch.is_active }
         render :action => 'fees_particulars_new'
         return
@@ -886,7 +878,7 @@ class FinanceController < ApplicationController
 
   def fees_particulars_create2
     @error = false
-    finance_fee_categories = FinanceFeeCategory.find_all_by_id(params[:finance_fee_particular][:finance_fee_category_ids].reject{|cat| cat.empty?}.map{|cat| cat.to_i}) unless params[:finance_fee_particular][:finance_fee_category_ids].blank?
+    finance_fee_categories = FinanceFeeCategory.where(:id => params[:finance_fee_particular][:finance_fee_category_ids].reject{|cat| cat.empty?}.map{|cat| cat.to_i}) unless params[:finance_fee_particular][:finance_fee_category_ids].blank?
     batches = finance_fee_categories.map{|ffc| ffc.batch}
     posted_params = params[:finance_fee_particular]
     posted_admission_no = params[:finance_fee_particular][:admission_no]
@@ -925,7 +917,7 @@ class FinanceController < ApplicationController
         @error = true unless @finance_fee_particular.save
       end
     end
-    @particulars = FinanceFeeParticular.all(:conditions => {:is_deleted => false,:finance_fee_category_id => finance_fee_categories.map{|ffc| ffc.id}})
+    @particulars = FinanceFeeParticular.where(:is_deleted => false,:finance_fee_category_id => finance_fee_categories.map{|ffc| ffc.id})
   end
 
 
@@ -940,7 +932,7 @@ class FinanceController < ApplicationController
     # batch ||=[]
     @batches = Batch.active
     @user = current_user
-    @students = Student.find_all_by_batch_id(batch) unless batch.nil?
+    @students = Student.where(:batch_id => batch) unless batch.nil?
     @additional_category = FinanceFeeCategory.new(
       :name => params[:additional_fees][:name],
       :description => params[:additional_fees][:description],
@@ -972,7 +964,7 @@ class FinanceController < ApplicationController
           Event.create(:title=> "#{t('fees_due')}", :description =>@additional_category.name, :start_date => @due_date.to_datetime, :end_date => @due_date.to_datetime, :is_due => true, :origin => @collection_date)
         else
           @batches.each do |b|
-            @students = Student.find_all_by_batch_id(b.id)
+            @students = Student.where(:batch_id => b.id)
             @students.each do |s|
               FinanceFee.create(:student_id => s.id,:fee_collection_id => @collection_date.id)
               Reminder.create(:sender=>@user.id, :recipient=>s.user.id, :subject=> subject,
@@ -1010,7 +1002,7 @@ class FinanceController < ApplicationController
     if @finance_fee_category.update_attributes(:name =>params[:finance_fee_category][:name], :description =>params[:finance_fee_category][:description])
       if @collection_date.update_attributes(:start_date=>params[:additional_fees][:start_date], :end_date=>params[:additional_fees][:end_date],:due_date=>params[:additional_fees][:due_date])
         @collection_date.event.update_attributes(:start_date=>@collection_date.due_date.to_datetime, :end_date=>@collection_date.due_date.to_datetime)
-        @additional_categories = FinanceFeeCategory.find(:all, :conditions =>["is_deleted = '#{false}' and is_master = '#{false}' and batch_id = '#{@finance_fee_category.batch_id}'"])
+        @additional_categories = FinanceFeeCategory.where("is_deleted = false AND is_master = false AND batch_id = ?",@finance_fee_category.batch_id)
         #        page.replace_html 'form-errors', :text => ''
         #        page << "Modalbox.hide();"
         #        page.replace_html 'particulars', :partial => 'additional_fees_list'
@@ -1033,7 +1025,7 @@ class FinanceController < ApplicationController
     @finance_fee_collection.update_attributes(:is_deleted => true)
     @finance_fee_category.delete_particulars
     # redirect_to :action => "additional_fees_list"
-    @additional_categories = FinanceFeeCategory.find(:all, :conditions =>["is_deleted = '#{false}' and is_master = '#{false}' and batch_id = '#{@finance_fee_category.batch_id}'"])
+    @additional_categories = FinanceFeeCategory.where("is_deleted = false AND is_master = false AND batch_id = ?",@finance_fee_category.batch_id)
     respond_to do |format|
       format.js { render :action => 'additional_fees_delete' }
       flash[:notice] = "#{t('flash27')}"
@@ -1045,7 +1037,7 @@ class FinanceController < ApplicationController
     @additional_category = FinanceFeeCategory.find(@collection_date.fee_category_id)
     @student_categories = StudentCategory.active
     @finance_fee_particulars = FeeCollectionParticular.new
-    @finance_fee_particulars_list = FeeCollectionParticular.find(:all,:conditions => ["is_deleted = '#{false}' and finance_fee_collection_id = '#{@collection_date.id}'"])
+    @finance_fee_particulars_list = FeeCollectionParticular.where("is_deleted = false AND finance_fee_collection_id = ?",@collection_date.id)
   end
 
   def add_particulars_new
@@ -1085,7 +1077,7 @@ class FinanceController < ApplicationController
           end
         end
         @finance_fee_particulars.errors.add(:admission_no," #{t('invalid')} : <br />" + err) if @error==true
-        @finance_fee_particulars_list = FeeCollectionParticular.find(:all,:conditions => ["is_deleted = '#{false}' and finance_fee_collection_id = '#{@collection_date.id}'"])  unless @error== true
+        @finance_fee_particulars_list = FeeCollectionParticular.where("is_deleted = false AND finance_fee_collection_id = ?",@collection_date.id)  unless @error== true
       else
         @error = true
         @finance_fee_particulars = FeeCollectionParticular.new(params[:finance_fee_particulars])
@@ -1098,7 +1090,7 @@ class FinanceController < ApplicationController
       unless @finance_fee_particulars.save
         @error = true
       else
-        @finance_fee_particulars_list = FeeCollectionParticular.find(:all,:conditions => ["is_deleted = '#{false}' and finance_fee_collection_id = '#{@collection_date.id}'"])
+        @finance_fee_particulars_list = FeeCollectionParticular.where("is_deleted = false AND finance_fee_collection_id = ?",@collection_date.id)
       end
 
     end
@@ -1130,7 +1122,7 @@ class FinanceController < ApplicationController
   end
 
   def show_additional_fees_list
-    @additional_categories = FinanceFeeCategory.find(:all,:conditions => ["is_deleted = '#{false}' and is_master = '#{false}' and batch_id=?",params[:id]])
+    @additional_categories = FinanceFeeCategory.where("is_deleted = false AND is_master = false AND batch_id=?",params[:id])
     render :update do |page|
       page.replace_html 'particulars', :partial =>'additional_fees_list'
     end
@@ -1139,7 +1131,7 @@ class FinanceController < ApplicationController
   def additional_particulars
     @additional_category = FinanceFeeCategory.find(params[:id])
     @collection_date = FinanceFeeCollection.find_by_fee_category_id(@additional_category.id)
-    @particulars = FeeCollectionParticular.find(:all,:conditions => ["is_deleted = '#{false}' and finance_fee_collection_id = '#{@collection_date.id}' "])
+    @particulars = FeeCollectionParticular.where("is_deleted = false AND finance_fee_collection_id = ?",@collection_date.id)
   end
 
   def add_particulars_edit
@@ -1152,7 +1144,7 @@ class FinanceController < ApplicationController
       if @finance_fee_particulars.update_attributes(params[:finance_fee_particulars])
         @collection_date = @finance_fee_particulars.finance_fee_collection
         @additional_category =@collection_date.fee_category
-        @particulars = FeeCollectionParticular.paginate(:page => params[:page],:conditions => ["is_deleted = '#{false}' and finance_fee_collection_id = '#{@collection_date.id}' "])
+        @particulars = FeeCollectionParticular.where("is_deleted = false AND finance_fee_collection_id = ?",@collection_date.id).paginate(:page => params[:page])
         page.replace_html 'form-errors', :text => ''
         page << "Modalbox.hide();"
         page.replace_html 'particulars', :partial => 'additional_particulars_list'
@@ -1169,7 +1161,7 @@ class FinanceController < ApplicationController
     @finance_fee_particulars.update_attributes(:is_deleted => true)
     @collection_date = @finance_fee_particulars.finance_fee_collection
     @additional_category =@collection_date.fee_category
-    @particulars = FeeCollectionParticular.paginate(:page => params[:page],:conditions => ["is_deleted = '#{false}' and finance_fee_collection_id = '#{@collection_date.id}' "])
+    @particulars = FeeCollectionParticular.where("is_deleted = false AND finance_fee_collection_id = ?",@collection_date.id).paginate(:page => params[:page]) 
     render :update do |page|
       page.replace_html 'flash_box', :text => "<p class='flash-msg'>#{t('particulars_deleted_successfully')}</p>"
       page.replace_html 'particulars', :partial => 'additional_particulars_list'
@@ -1177,7 +1169,7 @@ class FinanceController < ApplicationController
   end
 
   def fee_collection_batch_update
-    @fee_category = FinanceFeeCategory.find_all_by_name(params[:id], :conditions=>['is_deleted is false'])
+    @fee_category = FinanceFeeCategory.where(:name => params[:id],:is_deleted => false)
     @fee_category.reject!{|x| x.batch.students.blank? or x.batch.is_deleted? or x.fee_particulars.blank?}
     render :update do |page|
       page.replace_html "batchs" ,:partial => "fee_collection_batchs"
@@ -1194,7 +1186,7 @@ class FinanceController < ApplicationController
     @fee_categories = FinanceFeeCategory.common_active
     unless params[:finance_fee_collection].nil?
       fee_category_name = params[:finance_fee_collection][:fee_category_id]
-      @fee_category = FinanceFeeCategory.find_all_by_name(fee_category_name, :conditions=>['is_deleted is false'])
+      @fee_category = FinanceFeeCategory.where(:name => fee_category_name, :is_deleted => false)
       @fee_category.reject!{|x| x.batch.students.blank? or x.batch.is_deleted? or x.fee_particulars.blank?}
     end
     category =[]
@@ -1216,7 +1208,7 @@ class FinanceController < ApplicationController
             :batch_id => b.id
           )
           if @finance_fee_collection.save
-            @students = Student.find_all_by_batch_id(b.id)
+            @students = Student.where(:batch_id => b.id)
             unless fee_category.have_common_particular?
               @students = @students.select{|stu| stu.has_associated_fee_particular?(fee_category)}
             end
@@ -1234,6 +1226,7 @@ class FinanceController < ApplicationController
             end
             new_event =  Event.create(:title=> "#{t('fees_due')}", :description =>params[:finance_fee_collection][:name], :start_date => @finance_fee_collection.due_date.to_datetime, :end_date => @finance_fee_collection.due_date.to_datetime, :is_due => true , :origin=>@finance_fee_collection)
             BatchEvent.create(:event_id => new_event.id, :batch_id => b.id )
+            #TODO use sidekiq
             Delayed::Job.enqueue(DelayedReminderJob.new( :sender_id  => @user.id,
                 :recipient_ids => recipient_ids,
                 :subject=>subject,
@@ -1301,17 +1294,18 @@ class FinanceController < ApplicationController
             " #{t('due_date')} : "+@finance_fee_collection.due_date.to_s+" <br /><br /><br />"+
             " #{t('check_your')} #{t('fee_structure')} <br/><br/><br/> "
           recipient_ids = []
-          @students = Student.find_all_by_batch_id(@finance_fee_collection.batch_id)
+          @students = Student.where(:batch_id => @finance_fee_collection.batch_id)
           @students.each do |s|
             unless s.has_paid_fees
               recipient_ids << s.user.id
             end
           end
+          #TODO use sidekiq
           Delayed::Job.enqueue(DelayedReminderJob.new( :sender_id  => @user.id,
               :recipient_ids => recipient_ids,
               :subject=>subject,
               :body=>body ))
-          @finance_fee_collections = FinanceFeeCollection.all(:conditions => ["is_deleted = '#{false}' and batch_id = '#{@finance_fee_collection.batch_id}'"])
+          @finance_fee_collections = FinanceFeeCollection.where("is_deleted = false AND batch_id = ?",@finance_fee_collection.batch_id)
           page.replace_html 'form-errors', :text => ''
           page << "Modalbox.hide();"
           page.replace_html 'fee_collection_dates', :partial => 'fee_collection_list'
@@ -1326,13 +1320,13 @@ class FinanceController < ApplicationController
         
       end
     end
-    @finance_fee_collections = FinanceFeeCollection.all(:conditions => ["is_deleted = '#{false}' and batch_id = '#{@finance_fee_collection.batch_id}'"])
+    @finance_fee_collections = FinanceFeeCollection.where("is_deleted = false AND batch_id = ?",@finance_fee_collection.batch_id)
   end
 
   def fee_collection_delete
     @finance_fee_collection = FinanceFeeCollection.find params[:id]
     @finance_fee_collection.update_attributes(:is_deleted => true)
-    @finance_fee_collections = FinanceFeeCollection.all(:conditions => ["is_deleted = '#{false}' and batch_id = '#{@finance_fee_collection.batch_id}'"])
+    @finance_fee_collections = FinanceFeeCollection.where("is_deleted = false AND batch_id = ?",@finance_fee_collection.batch_id)
   end
 
   #fees_submission-----------------------------------
@@ -1360,7 +1354,7 @@ class FinanceController < ApplicationController
     @dates   = FinanceFeeCollection.find(:all)
     @date    =  @fee_collection = FinanceFeeCollection.find(params[:date])
     @student = Student.find(params[:student]) if params[:student]
-    @fee = FinanceFee.first(:conditions=>"fee_collection_id = #{@date.id}" ,:joins=>'INNER JOIN students ON finance_fees.student_id = students.id')
+    @fee = FinanceFee.joins(:students).where("fee_collection_id = ?",@date.id).first
     unless @fee.nil?
       @student ||= @fee.student
       @prev_student = @student.previous_fee_student(@date.id)
@@ -1368,14 +1362,15 @@ class FinanceController < ApplicationController
       @financefee = @student.finance_fee_by_date @date
       @due_date = @fee_collection.due_date
       unless @financefee.transaction_id.blank?
-        @paid_fees = FinanceTransaction.find(:all,:conditions=>"FIND_IN_SET(id,\"#{@financefee.transaction_id}\")", :order=>"created_at ASC")
+        #TODO find_in_set
+        @paid_fees = FinanceTransaction.where("FIND_IN_SET(id,\"#{@financefee.transaction_id}\")").order("created_at ASC")
       end
-      @fee_category = FinanceFeeCategory.find(@fee_collection.fee_category_id,:conditions => ["is_deleted = false"])
+      @fee_category = FinanceFeeCategory.where(:id => @fee_collection.fee_category_id,:is_deleted => false)
       @fee_particulars = @date.fees_particulars(@student)
 
-      @batch_discounts = BatchFeeCollectionDiscount.find_all_by_finance_fee_collection_id(@date.id)
-      @student_discounts = StudentFeeCollectionDiscount.find_all_by_finance_fee_collection_id_and_receiver_id(@date.id,@student.id)
-      @category_discounts = StudentCategoryFeeCollectionDiscount.find_all_by_finance_fee_collection_id_and_receiver_id(@date.id,@student.student_category_id)
+      @batch_discounts = BatchFeeCollectionDiscount.where(:finance_fee_collection_id => @date.id)
+      @student_discounts = StudentFeeCollectionDiscount.where("finance_fee_collection_id = ? AND receiver_id = ? ",@date.id,@student.id)
+      @category_discounts = StudentCategoryFeeCollectionDiscount.where("finance_fee_collection_id =? AND receiver_id = ?",@date.id,@student.student_category_id)
       @total_discount = 0
       @total_discount += @batch_discounts.map{|s| s.total_payable(@student) * s.discount(@student) / 100}.sum unless @batch_discounts.nil?
       @total_discount += @student_discounts.map{|s| s.total_payable(@student) * s.discount(@student) / 100}.sum unless @student_discounts.nil?
@@ -1401,7 +1396,7 @@ class FinanceController < ApplicationController
     @dates = FinanceFeeCollection.find(:all)
     @date = @fee_collection = FinanceFeeCollection.find(params[:date])
     @student = Student.find(params[:student]) if params[:student]
-    @student ||= FinanceFee.first(:conditions=>"fee_collection_id = #{@date.id}",:joins=>'INNER JOIN students ON finance_fees.student_id = students.id').student
+    @student ||= FinanceFee.joins(:students).where("fee_collection_id = ?",@date.id).first #TODO '.student at the end
     @prev_student = @student.previous_fee_student(@date.id)
     @next_student = @student.next_fee_student(@date.id)
     @due_date = @fee_collection.due_date
@@ -1409,12 +1404,12 @@ class FinanceController < ApplicationController
 
     @financefee = @student.finance_fee_by_date @date
    
-    @fee_category = FinanceFeeCategory.find(@fee_collection.fee_category_id,:conditions => ["is_deleted IS NOT NULL"])
+    @fee_category = FinanceFeeCategory.where("id = ? AND is_deleted IS NOT NULL",@fee_collection.fee_category_id)
     @fee_particulars = @date.fees_particulars(@student)
 
-    @batch_discounts = BatchFeeCollectionDiscount.find_all_by_finance_fee_collection_id(@fee_collection.id)
-    @student_discounts = StudentFeeCollectionDiscount.find_all_by_finance_fee_collection_id_and_receiver_id(@fee_collection.id,@student.id)
-    @category_discounts = StudentCategoryFeeCollectionDiscount.find_all_by_finance_fee_collection_id_and_receiver_id(@fee_collection.id,@student.student_category_id)
+    @batch_discounts = BatchFeeCollectionDiscount.where(:finance_fee_collection_id => @fee_collection.id)
+    @student_discounts = StudentFeeCollectionDiscount.where("finance_fee_collection_id = ? AND receiver_id = ? ",@fee_collection.id,@student.id)
+    @category_discounts = StudentCategoryFeeCollectionDiscount.where("finance_fee_collection_id = ? AND receiver_id = ?",@fee_collection.id,@student.student_category_id)
     @total_discount = 0
     @total_discount += @batch_discounts.map{|s| s.total_payable(@student) * s.discount(@student) / 100}.sum unless @batch_discounts.nil?
     @total_discount += @student_discounts.map{|s| s.total_payable(@student) * s.discount(@student) / 100}.sum unless @student_discounts.nil?
@@ -1454,14 +1449,15 @@ class FinanceController < ApplicationController
 
         is_paid = (params[:fees][:fees_paid].to_f == params[:total_fees].to_f) ? true : false
         @financefee.update_attributes(:transaction_id=>tid, :is_paid=>is_paid)
-    
-        @paid_fees = FinanceTransaction.find(:all,:conditions=>"FIND_IN_SET(id,\"#{tid}\")")
+        #TODO find_in_set
+        @paid_fees = FinanceTransaction.where("FIND_IN_SET(id,\"#{tid}\")")
       else
-        @paid_fees = FinanceTransaction.find(:all,:conditions=>"FIND_IN_SET(id,\"#{@financefee.transaction_id}\")")
+        #TODO find_in_set
+        @paid_fees = FinanceTransaction.where("FIND_IN_SET(id,\"#{@financefee.transaction_id}\")")
         @financefee.errors.add_to_base("#{t('flash19')}")
       end
     else
-      @paid_fees = FinanceTransaction.find(:all,:conditions=>"FIND_IN_SET(id,\"#{@financefee.transaction_id}\")")
+      @paid_fees = FinanceTransaction.where("FIND_IN_SET(id,\"#{@financefee.transaction_id}\")")
       @financefee.errors.add_to_base("#{t('flash23')}")
     end
     render :update do |page|
@@ -1478,15 +1474,16 @@ class FinanceController < ApplicationController
     @due_date = @fee_collection.due_date
     
     unless @financefee.transaction_id.blank?
-      @paid_fees = FinanceTransaction.find(:all,:conditions=>"FIND_IN_SET(id,\"#{@financefee.transaction_id}\")", :order=>"created_at ASC")
+      #TODO find_in_set
+      @paid_fees = FinanceTransaction.where("FIND_IN_SET(id,\"#{@financefee.transaction_id}\")").order("created_at ASC")
     end
-    @fee_category = FinanceFeeCategory.find(@fee_collection.fee_category_id,:conditions => ["is_deleted = false"])
+    @fee_category = FinanceFeeCategory.where("id = ? AND is_deleted = false",@fee_collection.fee_category_id).first
     @fee_particulars = @date.fees_particulars(@student)
-    @currency_type = Configuration.find_by_config_key("CurrencyType").config_value
+    @currency_type = Config.find_by_config_key("CurrencyType").config_value
 
-    @batch_discounts = BatchFeeCollectionDiscount.find_all_by_finance_fee_collection_id(@fee_collection.id)
-    @student_discounts = StudentFeeCollectionDiscount.find_all_by_finance_fee_collection_id_and_receiver_id(@fee_collection.id,@student.id)
-    @category_discounts = StudentCategoryFeeCollectionDiscount.find_all_by_finance_fee_collection_id_and_receiver_id(@fee_collection.id,@student.student_category_id)
+    @batch_discounts = BatchFeeCollectionDiscount.where(:finance_fee_collection_id => @fee_collection.id)
+    @student_discounts = StudentFeeCollectionDiscount.where("finance_fee_collection_id AND receiver_id = ?",@fee_collection.id,@student.id)
+    @category_discounts = StudentCategoryFeeCollectionDiscount.where("finance_fee_collection_id = ? AND receiver_id =?",@fee_collection.id,@student.student_category_id)
     @total_discount = 0
     @total_discount += @batch_discounts.map{|s| s.total_payable(@student) * s.discount(@student) / 100}.sum unless @batch_discounts.nil?
     @total_discount += @student_discounts.map{|s| s.total_payable(@student) * s.discount(@student) / 100}.sum unless @student_discounts.nil?
@@ -1507,29 +1504,30 @@ class FinanceController < ApplicationController
   def update_fine_ajax
     if request.post?
       @batch   = Batch.find(params[:fine][:batch_id])
-      @dates = FinanceFeeCollection.find(:all)
+      @dates = FinanceFeeCollection.all
       @date = @fee_collection = FinanceFeeCollection.find(params[:fine][:date])
       @student = Student.find(params[:fine][:student]) if params[:fine][:student]
-      @student ||= FinanceFee.first(:conditions=>"fee_collection_id = #{@date.id}",:joins=>'INNER JOIN students ON finance_fees.student_id = students.id').student
+      @student ||= FinanceFee.joins(:student).where("fee_collection_id = ?",@date.id).first #TODO .student at the end
       @prev_student = @student.previous_fee_student(@date.id)
       @next_student = @student.next_fee_student(@date.id)
       
       @financefee = @student.finance_fee_by_date @date
       unless @financefee.transaction_id.blank?
-        @paid_fees = FinanceTransaction.find(:all,:conditions=>"FIND_IN_SET(id,\"#{@financefee.transaction_id}\")", :order=>"created_at ASC")
+        #TODO find_in_set
+        @paid_fees = FinanceTransaction.where("FIND_IN_SET(id,\"#{@financefee.transaction_id}\")").order("created_at ASC")
       end
       unless params[:fine][:fee].to_f < 0
         @fine = (params[:fine][:fee])
       else
         @financefee.errors.add_to_base("#{t('flash24')}")
       end
-      @fee_category = FinanceFeeCategory.find(@fee_collection.fee_category_id,:conditions => ["is_deleted IS NOT NULL"])
+      @fee_category = FinanceFeeCategory.where("id = ? AND is_deleted IS NOT NULL",@fee_collection.fee_category_id).first
       @fee_particulars = @date.fees_particulars(@student)
       @due_date = @fee_collection.due_date
 
-      @batch_discounts = BatchFeeCollectionDiscount.find_all_by_finance_fee_collection_id(@fee_collection.id)
-      @student_discounts = StudentFeeCollectionDiscount.find_all_by_finance_fee_collection_id_and_receiver_id(@fee_collection.id,@student.id)
-      @category_discounts = StudentCategoryFeeCollectionDiscount.find_all_by_finance_fee_collection_id_and_receiver_id(@fee_collection.id,@student.student_category_id)
+      @batch_discounts = BatchFeeCollectionDiscount.where(:finance_fee_collection_id => @fee_collection.id)
+      @student_discounts = StudentFeeCollectionDiscount.where("finance_fee_collection_id = ? AND receiver_id = ?",@fee_collection.id,@student.id)
+      @category_discounts = StudentCategoryFeeCollectionDiscount.where("finance_fee_collection_id = ? AND receiver_id = ? ",@fee_collection.id,@student.student_category_id)
       @total_discount = 0
       @total_discount += @batch_discounts.map{|s| s.total_payable(@student) * s.discount(@student) / 100}.sum unless @batch_discounts.nil?
       @total_discount += @student_discounts.map{|s| s.total_payable(@student) * s.discount(@student) / 100}.sum unless @student_discounts.nil?
@@ -1550,16 +1548,13 @@ class FinanceController < ApplicationController
   def search_logic                 #student search (fees submission)
     query = params[:query]
     if query.length>= 3
-      @students_result = Student.find(:all,
-        :conditions => ["first_name LIKE ? OR middle_name LIKE ? OR last_name LIKE ?
+      #TODO concat
+      @students_result = Student.where("first_name LIKE ? OR middle_name LIKE ? OR last_name LIKE ?
                             OR admission_no = ? OR (concat(first_name, \" \", last_name) LIKE ? ) ",
           "#{query}%","#{query}%","#{query}%",
-          "#{query}", "#{query}" ],
-        :order => "batch_id asc,first_name asc") unless query == ''
+          "#{query}", "#{query}").order("batch_id asc,first_name asc") unless query == ''
     else
-      @students_result = Student.find(:all,
-        :conditions => ["admission_no = ? " , query],
-        :order => "batch_id asc,first_name asc") unless query == ''
+      @students_result = Student.where("admission_no = ? " , query).order("batch_id asc,first_name asc") unless query == ''
     end
     render :layout => false
   end
@@ -1577,15 +1572,16 @@ class FinanceController < ApplicationController
     @financefee = @student.finance_fee_by_date(@date)
     
     @due_date = @fee_collection.due_date
-    @fee_category = FinanceFeeCategory.find(@fee_collection.fee_category_id,:conditions => ["is_deleted IS NOT NULL"])
+    @fee_category = FinanceFeeCategory.where("id  = ? AND is_deleted IS NOT NULL",@fee_collection.fee_category_id).first
     @fee_particulars = @date.fees_particulars(@student)
     unless @financefee.transaction_id.blank?
-      @paid_fees = FinanceTransaction.find(:all,:conditions=>"FIND_IN_SET(id,\"#{@financefee.transaction_id}\")")
+      #TODO find_in_set
+      @paid_fees = FinanceTransaction.where("FIND_IN_SET(id,\"#{@financefee.transaction_id}\")")
     end
 
-    @batch_discounts = BatchFeeCollectionDiscount.find_all_by_finance_fee_collection_id(@fee_collection.id)
-    @student_discounts = StudentFeeCollectionDiscount.find_all_by_finance_fee_collection_id_and_receiver_id(@fee_collection.id,@student.id)
-    @category_discounts = StudentCategoryFeeCollectionDiscount.find_all_by_finance_fee_collection_id_and_receiver_id(@fee_collection.id,@student.student_category_id)
+    @batch_discounts = BatchFeeCollectionDiscount.where(:finance_fee_collection_id => @fee_collection.id)
+    @student_discounts = StudentFeeCollectionDiscount.where("finance_fee_collection_id = ? AND receiver_id = ?",@fee_collection.id,@student.id)
+    @category_discounts = StudentCategoryFeeCollectionDiscount.where("finance_fee_collection_id = ? AND receiver_id = ? ",@fee_collection.id,@student.student_category_id)
     @total_discount = 0
     @total_discount += @batch_discounts.map{|s| s.total_payable(@student) * s.discount(@student) / 100}.sum unless @batch_discounts.nil?
     @total_discount += @student_discounts.map{|s| s.total_payable(@student) * s.discount(@student) / 100}.sum unless @student_discounts.nil?
@@ -1614,12 +1610,12 @@ class FinanceController < ApplicationController
     end
 
     @due_date = @fee_collection.due_date
-    @fee_category = FinanceFeeCategory.find(@fee_collection.fee_category_id,:conditions => ["is_deleted IS NOT NULL"])
+    @fee_category = FinanceFeeCategory.where("id = ? AND is_deleted IS NOT NULL",@fee_collection.fee_category_id).first
     @fee_particulars = @date.fees_particulars(@student)
 
-    @batch_discounts = BatchFeeCollectionDiscount.find_all_by_finance_fee_collection_id(@fee_collection.id)
-    @student_discounts = StudentFeeCollectionDiscount.find_all_by_finance_fee_collection_id_and_receiver_id(@fee_collection.id,@student.id)
-    @category_discounts = StudentCategoryFeeCollectionDiscount.find_all_by_finance_fee_collection_id_and_receiver_id(@fee_collection.id,@student.student_category_id)
+    @batch_discounts = BatchFeeCollectionDiscount.where(:finance_fee_collection_id => @fee_collection.id)
+    @student_discounts = StudentFeeCollectionDiscount.where("finance_fee_collection_id = ? AND receiver_id = ? ",@fee_collection.id,@student.id)
+    @category_discounts = StudentCategoryFeeCollectionDiscount.where("finance_fee_collection_id = ? AND receiver_id = ?",@fee_collection.id,@student.student_category_id)
     @total_discount = 0
     @total_discount += @batch_discounts.map{|s| s.total_payable(@student) * s.discount(@student) / 100}.sum unless @batch_discounts.nil?
     @total_discount += @student_discounts.map{|s| s.total_payable(@student) * s.discount(@student) / 100}.sum unless @student_discounts.nil?
@@ -1642,11 +1638,11 @@ class FinanceController < ApplicationController
     @financefee = @date.fee_transactions(@student.id)
 
     @due_date = @fee_collection.due_date
-    @fee_category = FinanceFeeCategory.find(@fee_collection.fee_category_id,:conditions => ["is_deleted IS NOT NULL"])
+    @fee_category = FinanceFeeCategory.where("id= ? AND is_deleted IS NOT NULL",@fee_collection.fee_category_id)
     @fee_particulars = @date.fees_particulars(@student)
-    @batch_discounts = BatchFeeCollectionDiscount.find_all_by_finance_fee_collection_id(@fee_collection.id)
-    @student_discounts = StudentFeeCollectionDiscount.find_all_by_finance_fee_collection_id_and_receiver_id(@fee_collection.id,@student.id)
-    @category_discounts = StudentCategoryFeeCollectionDiscount.find_all_by_finance_fee_collection_id_and_receiver_id(@fee_collection.id,@student.student_category_id)
+    @batch_discounts = BatchFeeCollectionDiscount.where(:finance_fee_collection_id => @fee_collection.id)
+    @student_discounts = StudentFeeCollectionDiscount.where("finance_fee_collection_id AND receiver_id = ?",@fee_collection.id,@student.id)
+    @category_discounts = StudentCategoryFeeCollectionDiscount.where("finance_fee_collection_id AND receiver_id = ?",@fee_collection.id,@student.student_category_id)
     @total_discount = 0
     @total_discount += @batch_discounts.map{|s| s.total_payable(@student) * s.discount(@student) / 100}.sum unless @batch_discounts.nil?
     @total_discount += @student_discounts.map{|s| s.total_payable(@student) * s.discount(@student) / 100}.sum unless @student_discounts.nil?
@@ -1663,7 +1659,7 @@ class FinanceController < ApplicationController
       total_fees += params[:fine].to_f
     end
     unless @financefee.transaction_id.blank?
-      @paid_fees = FinanceTransaction.find(:all,:conditions=>"FIND_IN_SET(id,\"#{@financefee.transaction_id}\")")
+      @paid_fees = FinanceTransaction.where("FIND_IN_SET(id,\"#{@financefee.transaction_id}\")")
     end
     if request.post?
       unless params[:fees][:fees_paid].to_f < 0
@@ -1686,7 +1682,7 @@ class FinanceController < ApplicationController
           is_paid = (params[:fees][:fees_paid].to_f == params[:total_fees].to_f) ? true : false
           @financefee.update_attributes(:transaction_id=>tid, :is_paid=>is_paid)
           unless @financefee.transaction_id.blank?
-            @paid_fees = FinanceTransaction.find(:all,:conditions=>"FIND_IN_SET(id,\"#{@financefee.transaction_id}\")")
+            @paid_fees = FinanceTransaction.where("FIND_IN_SET(id,\"#{@financefee.transaction_id}\")")
           end
           flash[:warning] = "#{t('flash14')}"
         else
@@ -1707,15 +1703,12 @@ class FinanceController < ApplicationController
   def fees_student_structure_search_logic # student search fees structure
     query = params[:query]
     unless query.length < 3
-      @students_result = Student.find(:all,
-        :conditions => ["first_name LIKE ? OR middle_name LIKE ? OR last_name LIKE ?
+      #TODO concat
+      @students_result = Student.where("first_name LIKE ? OR middle_name LIKE ? OR last_name LIKE ?
                          OR admission_no = ? OR (concat(first_name, \" \", last_name) LIKE ? ) ",
-          "#{query}%","#{query}%","#{query}%","#{query}", "#{query}" ],
-        :order => "batch_id asc,first_name asc") unless query == ''
+                         "#{query}%","#{query}%","#{query}%","#{query}", "#{query}").order("batch_id asc,first_name asc") unless query == ''
     else
-      @students_result = Student.find(:all,
-        :conditions => ["admission_no = ? " , query],
-        :order => "batch_id asc,first_name asc") unless query == ''
+      @students_result = Student.where("admission_no = ? " , query).order("batch_id asc,first_name asc") unless query == ''
     end
     render :layout => false
   end
@@ -1723,21 +1716,21 @@ class FinanceController < ApplicationController
   def fees_structure_dates
     @student = Student.find(params[:id])
     #@dates = @student.batch.fee_collection_dates
-    @student_fees = FinanceFee.find_all_by_student_id(@student.id,:select=>'fee_collection_id')
+    @student_fees = FinanceFee.where(:student_id => @student.id).select('fee_collection_id')
     @student_dates = ""
     @student_fees.map{|s| @student_dates += s.fee_collection_id.to_s + ","}
-    @dates = FinanceFeeCollection.find(:all,:conditions=>"FIND_IN_SET(id,\"#{@student_dates}\") and is_deleted = 0")
+    @dates = FinanceFeeCollection.where("is_deleted = false AND FIND_IN_SET(id,\"#{@student_dates}\")")
   end
 
   def fees_structure_for_student
     @student = Student.find(params[:id])
     @fee_collection = FinanceFeeCollection.find params[:date]
-    @fee_category = FinanceFeeCategory.find(@fee_collection.fee_category_id,:conditions => ["is_deleted IS NOT NULL"])
+    @fee_category = FinanceFeeCategory.where("id = ? AND is_deleted IS NOT NULL",@fee_collection.fee_category_id).first
     @fee_particulars = @fee_collection.fees_particulars(@student)
 
-    @batch_discounts = BatchFeeCollectionDiscount.find_all_by_finance_fee_collection_id(@fee_collection.id)
-    @student_discounts = StudentFeeCollectionDiscount.find_all_by_finance_fee_collection_id_and_receiver_id(@fee_collection.id,@student.id)
-    @category_discounts = StudentCategoryFeeCollectionDiscount.find_all_by_finance_fee_collection_id_and_receiver_id(@fee_collection.id,@student.student_category_id)
+    @batch_discounts = BatchFeeCollectionDiscount.where(:finance_fee_collection_id => @fee_collection.id)
+    @student_discounts = StudentFeeCollectionDiscount.where("finance_fee_collection_id = ? AND receiver_id = ?",@fee_collection.id,@student.id)
+    @category_discounts = StudentCategoryFeeCollectionDiscount.where("finance_fee_collection_id = ? AND receiver_id = ?",@fee_collection.id,@student.student_category_id)
     @total_discount = 0
     @total_discount += @batch_discounts.map{|s| s.total_payable(@student) * s.discount(@student) / 100}.sum unless @batch_discounts.nil?
     @total_discount += @student_discounts.map{|s| s.total_payable(@student) * s.discount(@student) / 100}.sum unless @student_discounts.nil?
@@ -1754,7 +1747,7 @@ class FinanceController < ApplicationController
   def student_fees_structure
     @student = Student.find(params[:id])
     @fee_collection = FinanceFeeCollection.find params[:id2]
-    @fee_category = FinanceFeeCategory.find(@fee_collection.fee_category_id,:conditions => ["is_deleted IS NOT NULL"])
+    @fee_category = FinanceFeeCategory.where("id = ? AND is_deleted IS NOT NULL",@fee_collection.fee_category_id).first
     @fee_particulars = @fee_collection.fees_particulars(@student)
   end
   
@@ -1799,8 +1792,8 @@ class FinanceController < ApplicationController
     @batch   = Batch.find(params[:batch_id])
     @date = FinanceFeeCollection.find(params[:date])
     @students = @date.students.reject{|s| s.batch_id != @batch.id}
-    @currency_type = Configuration.find_by_config_key("CurrencyType").config_value
-        
+    @currency_type = Config.find_by_config_key("CurrencyType").config_value
+       
     render :pdf => 'fee_defaulters_pdf'
   end
 
@@ -1810,12 +1803,12 @@ class FinanceController < ApplicationController
     @date = @fee_collection = FinanceFeeCollection.find(params[:date])
     @financefee = @date.fee_transactions(@student.id)
 
-    @fee_category = FinanceFeeCategory.find(@fee_collection.fee_category_id,:conditions => ["is_deleted IS NOT NULL"])
+    @fee_category = FinanceFeeCategory.where("id = ? AND is_deleted IS NOT NULL",@fee_collection.fee_category_id).first
     @fee_particulars = @date.fees_particulars(@student)
 
-    @batch_discounts = BatchFeeCollectionDiscount.find_all_by_finance_fee_collection_id(@fee_collection.id)
-    @student_discounts = StudentFeeCollectionDiscount.find_all_by_finance_fee_collection_id_and_receiver_id(@fee_collection.id,@student.id)
-    @category_discounts = StudentCategoryFeeCollectionDiscount.find_all_by_finance_fee_collection_id_and_receiver_id(@fee_collection.id,@student.student_category_id)
+    @batch_discounts = BatchFeeCollectionDiscount.where(:finance_fee_collection_id => @fee_collection.id)
+    @student_discounts = StudentFeeCollectionDiscount.where("finance_fee_collection_id = ? AND receiver_id = ?",@fee_collection.id,@student.id)
+    @category_discounts = StudentCategoryFeeCollectionDiscount.where("finance_fee_collection_id = ? AND receiver_id = ?",@fee_collection.id,@student.student_category_id)
     @total_discount = 0
     @total_discount += @batch_discounts.map{|s| s.total_payable(@student) * s.discount(@student) / 100}.sum unless @batch_discounts.nil?
     @total_discount += @student_discounts.map{|s| s.total_payable(@student) * s.discount(@student) / 100}.sum unless @student_discounts.nil?
@@ -1826,7 +1819,8 @@ class FinanceController < ApplicationController
     @total_discount_percentage = [@batch_discounts,@student_discounts,@category_discounts].flatten.compact.map{|s| s.discount(@student)}.sum
     
     unless @financefee.transaction_id.blank?
-      @paid_fees = FinanceTransaction.find(:all,:conditions=>"FIND_IN_SET(id,\"#{@financefee.transaction_id}\")", :order=>"created_at ASC")
+      #TODO find_in_set
+      @paid_fees = FinanceTransaction.where("FIND_IN_SET(id,\"#{@financefee.transaction_id}\")").order("created_at ASC")
     end
     total_fees = 0
     @fee_particulars.each do |p|
@@ -1857,7 +1851,7 @@ class FinanceController < ApplicationController
           is_paid = (params[:fees][:fees_paid].to_f == params[:total_fees].to_f) ? true : false
           @financefee.update_attributes(:transaction_id=>tid, :is_paid=>is_paid)
 
-          @paid_fees = FinanceTransaction.find(:all,:conditions=>"FIND_IN_SET(id,\"#{tid}\")")
+          @paid_fees = FinanceTransaction.where("FIND_IN_SET(id,\"#{tid}\")")   #TODO find_in_set
           flash[:notice] = "#{t('flash14')}"
           redirect_to  :action => "pay_fees_defaulters",:id => @student,:date => @date
         else
@@ -1875,7 +1869,7 @@ class FinanceController < ApplicationController
     @date = FinanceFeeCollection.find(params[:fine][:date])
     @financefee = @date.fee_transactions(@student.id)
     @fee_collection = FinanceFeeCollection.find(params[:fine][:date])
-    @fee_category = FinanceFeeCategory.find(@fee_collection.fee_category_id,:conditions => ["is_deleted IS NOT NULL"])
+    @fee_category = FinanceFeeCategory.where("id = ? AND is_deleted IS NOT NULL",@fee_collection.fee_category_id).first
     @fee_particulars = @date.fees_particulars(@student)
     unless params[:fine][:fee].to_f < 0
       @fine = params[:fine][:fee].to_f
@@ -1897,30 +1891,26 @@ class FinanceController < ApplicationController
 
   def report_compare
     fixed_category_name
-    @hr = Configuration.find_by_config_value("HR")
+    @hr = Config.find_by_config_value("HR")
     @start_date = (params[:start_date]).to_date
     @end_date = (params[:end_date]).to_date
     @start_date2 = (params[:start_date2]).to_date
     @end_date2 = (params[:end_date2]).to_date
-    @transactions = FinanceTransaction.find(:all,
-      :order => 'transaction_date desc', :conditions => ["transaction_date >= '#{@start_date}' and transaction_date <= '#{@end_date}'"])
-    @transactions2 = FinanceTransaction.find(:all,
-      :order => 'transaction_date desc', :conditions => ["transaction_date >= '#{@start_date2}' and transaction_date <= '#{@end_date2}'"])
-    @other_transaction_categories = FinanceTransaction.find(:all,params[:page], :conditions => ["transaction_date >= '#{@start_date}' and transaction_date <= '#{@end_date}'and category_id NOT IN (#{@fixed_cat_ids.join(",")})"],
-      :order => 'transaction_date').map{|ft| ft.category}.uniq
+    @transactions = FinanceTransaction.where("transaction_date >= ? AND transaction_date <= ?",@start_date,@end_date).order('transaction_date desc')
+    @transactions2 = FinanceTransaction.where("transaction_date >= ? AND transaction_date <= ?",@start_date2,@end_date2).order('transaction_date desc')
+    @other_transaction_categories = FinanceTransaction.where("id =? AND transaction_date >= ? AND transaction_date <= ? AND category_id NOT IN (?)",params[:page],@start_date,@end_date,@fixed_cat_ids.join(",")).order('transaction_date').map{|ft| ft.category}.uniq
     #    @other_transactions = FinanceTransaction.report(@start_date,@end_date,params[:page])
-    @other_transaction_categories2 = FinanceTransaction.find(:all,params[:page], :conditions => ["transaction_date >= '#{@start_date2}' and transaction_date <= '#{@end_date2}'and category_id NOT IN (#{@fixed_cat_ids.join(",")})"],
-      :order => 'transaction_date').map{|ft| ft.category}.uniq
+    @other_transaction_categories2 = FinanceTransaction.where("id = ? AND transaction_date >= ? AND transaction_date <= ? AND category_id NOT IN (?)",params[:page],@start_date2,@end_date2,@fixed_cat_ids.join(",")).order('transaction_date').map{|ft| ft.category}.uniq
     #    @transactions_fees = FinanceTransaction.total_fees(@start_date,@end_date)
     @transactions_fees2 = FinanceTransaction.total_fees(@start_date2,@end_date2)
-    employees = Employee.find(:all)
+    employees = Employee.all
     @salary = Employee.total_employees_salary(employees, @start_date, @end_date)
     @salary2 = Employee.total_employees_salary(employees, @start_date2, @end_date2)
     @donations_total = FinanceTransaction.donations_triggers(@start_date,@end_date)
     @donations_total2 = FinanceTransaction.donations_triggers(@start_date2,@end_date2)
     @transactions_fees = FinanceTransaction.total_fees(@start_date,@end_date)
     @transactions_fees2 = FinanceTransaction.total_fees(@start_date2,@end_date2)
-    @batchs = Batch.find(:all)
+    @batchs = Batch.all
     @grand_total = FinanceTransaction.grand_total(@start_date,@end_date)
     @grand_total2 = FinanceTransaction.grand_total(@start_date2,@end_date2)
     @category_transaction_totals = {}
@@ -1950,17 +1940,17 @@ class FinanceController < ApplicationController
 
   def pdf_fee_structure
     @student = Student.find(params[:id])
-    @institution_name = Configuration.find_by_config_key("InstitutionName")
-    @institution_address = Configuration.find_by_config_key("InstitutionAddress")
-    @institution_phone_no = Configuration.find_by_config_key("InstitutionPhoneNo")
-    @currency_type = Configuration.find_by_config_key("CurrencyType").config_value
+    @institution_name = Config.find_by_config_key("InstitutionName")
+    @institution_address = Config.find_by_config_key("InstitutionAddress")
+    @institution_phone_no = Config.find_by_config_key("InstitutionPhoneNo")
+    @currency_type = Config.find_by_config_key("CurrencyType").config_value
     @fee_collection = FinanceFeeCollection.find params[:id2]
-    @fee_category = FinanceFeeCategory.find(@fee_collection.fee_category_id,:conditions => ["is_deleted IS NOT NULL"])
+    @fee_category = FinanceFeeCategory.where("id = ? AND is_deleted IS NOT NULL",@fee_collection.fee_category_id).first
     @fee_particulars = @fee_collection.fees_particulars(@student)
     @total = @student.total_fees(@fee_particulars)
-    @batch_discounts = BatchFeeCollectionDiscount.find_all_by_finance_fee_collection_id(@fee_collection.id)
-    @student_discounts = StudentFeeCollectionDiscount.find_all_by_finance_fee_collection_id_and_receiver_id(@fee_collection.id,@student.id)
-    @category_discounts = StudentCategoryFeeCollectionDiscount.find_all_by_finance_fee_collection_id_and_receiver_id(@fee_collection.id,@student.student_category_id)
+    @batch_discounts = BatchFeeCollectionDiscount.where(:finance_fee_collection_id => @fee_collection.id).first
+    @student_discounts = StudentFeeCollectionDiscount.where("finance_fee_collection_id = ? AND receiver_id = ?",@fee_collection.id,@student.id)
+    @category_discounts = StudentCategoryFeeCollectionDiscount.where("finance_fee_collection_id = ? AND receiver_id = ?",@fee_collection.id,@student.student_category_id)
     @total_discount = 0
     @total_discount += @batch_discounts.map{|s| s.discount}.sum unless @batch_discounts.nil?
     @total_discount += @student_discounts.map{|s| s.discount}.sum unless @student_discounts.nil?
@@ -1982,9 +1972,9 @@ class FinanceController < ApplicationController
     
     start_date = (params[:start_date]).to_date
     end_date = (params[:end_date]).to_date
-    employees = Employee.find(:all)
+    employees = Employee.all
     
-    hr = Configuration.find_by_config_value("HR")
+    hr = Config.find_by_config_value("HR")
     donations_total = FinanceTransaction.donations_triggers(start_date,end_date)
     fees = FinanceTransaction.total_fees(start_date,end_date)
     income = FinanceTransaction.total_other_trans(start_date,end_date)[0]
@@ -2093,7 +2083,7 @@ class FinanceController < ApplicationController
     end_date2 = (params[:end_date2]).to_date
     employees = Employee.find(:all)
 
-    hr = Configuration.find_by_config_value("HR")
+    hr = Config.find_by_config_value("HR")
     donations_total = FinanceTransaction.donations_triggers(start_date,end_date)
     donations_total2 = FinanceTransaction.donations_triggers(start_date2,end_date2)
     fees = FinanceTransaction.total_fees(start_date,end_date)
@@ -2244,9 +2234,9 @@ class FinanceController < ApplicationController
 
     start_date = (params[:start_date]).to_date
     end_date = (params[:end_date]).to_date
-    employees = Employee.find(:all)
+    employees = Employee.all
 
-    hr = Configuration.find_by_config_value("HR")
+    hr = Config.find_by_config_value("HR")
     donations_total = FinanceTransaction.donations_triggers(start_date,end_date)
     fees = FinanceTransaction.total_fees(start_date,end_date)
     income = FinanceTransaction.total_other_trans(start_date,end_date)[0]
@@ -2387,7 +2377,7 @@ class FinanceController < ApplicationController
   end
 
   def load_batch_fee_category
-    @fees_categories = FinanceFeeCategory.find_all_by_batch_id((params[:batch]),:conditions=>"is_deleted = 0 and is_master = 1")
+    @fees_categories = FinanceFeeCategory.where("batch_id = ?  AND is_deleted = false AND is_master = true",params[:batch])
     render :update do |page|
       page.replace_html "fee-category-box", :partial => "fee_discount_category_list"
     end
@@ -2439,7 +2429,7 @@ class FinanceController < ApplicationController
         admission_no.each do |a|
           s = Student.find_by_admission_no(a)
           unless s.nil?
-            if FeeDiscount.find_by_type_and_receiver_id('StudentFeeDiscount',s.id,:conditions=>"finance_fee_category_id = #{@fee_category.id}").present?
+            if FeeDiscount.where("type = ? AND receiver_id = ? AND finance_fee_category_id = ?",'StudentFeeDiscount',s.id,@fee_category.id).first.present?
               @error = true
               @fee_discount.errors.add_to_base("#{t('flash20')} - #{a}")
             end
@@ -2475,7 +2465,7 @@ class FinanceController < ApplicationController
 
   def update_master_fee_category_list
     @batch = Batch.find(params[:id])
-    @fee_categories = FinanceFeeCategory.find_all_by_batch_id(@batch.id, :conditions=>"is_master=1 and is_deleted= 0")
+    @fee_categories = FinanceFeeCategory.where("batch_id = ? AND is_master = true AND is_deleted = false",@batch.id)
     render :update do |page|
       page.replace_html "master-category-box", :partial => "update_master_fee_category_list"
     end
@@ -2533,6 +2523,6 @@ class FinanceController < ApplicationController
       @cat_names << "#{category[:category_name]}"
       @plugin_cat << "#{category[:category_name]}"
     end
-    @fixed_cat_ids = FinanceTransactionCategory.find(:all,:conditions=>{:name=>@cat_names}).collect(&:id)
+    @fixed_cat_ids = FinanceTransactionCategory.where(:name=>@cat_names).collect(&:id)
   end
 end
