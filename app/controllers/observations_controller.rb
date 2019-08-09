@@ -17,7 +17,7 @@
 #limitations under the License.
 
 class ObservationsController < ApplicationController
-  before_filter :login_required
+  before_action :login_required
   filter_access_to :all
   def show
     @observation=Observation.find params[:id]
