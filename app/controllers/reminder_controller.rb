@@ -17,21 +17,21 @@
 #limitations under the License.
 
 class ReminderController < ApplicationController
-  before_filter :login_required
-  before_filter :protect_view_reminders, :only=>[:view_reminder,:mark_unread,:delete_reminder_by_recipient]
-  before_filter :protect_sent_reminders, :only=>[:view_sent_reminder,:delete_reminder_by_sender]
+  before_action :login_required
+  before_action :protect_view_reminders, :only=>[:view_reminder,:mark_unread,:delete_reminder_by_recipient]
+  before_action :protect_sent_reminders, :only=>[:view_sent_reminder,:delete_reminder_by_sender]
 
   def index
     @user = current_user
-    @reminders = Reminder.paginate(:page => params[:page], :conditions=>["recipient = '#{@user.id}' and is_deleted_by_recipient = false"], :order=>"created_at DESC",:include=>:user)
-    @read_reminders = Reminder.find_all_by_recipient(@user.id, :conditions=>"is_read = true and is_deleted_by_recipient = false", :order=>"created_at DESC")
-    @new_reminder_count = Reminder.find_all_by_recipient(@user.id, :conditions=>"is_read = false and is_deleted_by_recipient = false")
+    @reminders = Reminder.includes(:user).where("recipient = ? AND is_deleted_by_recipient = false",@user.id).order("created_at DESC").paginate(:page => params[:page])
+    @read_reminders = Reminder.where("recipient = ? AND is_read = true AND is_deleted_by_recipient = false",@user.id).order("created_at DESC")
+    @new_reminder_count = Reminder.where("recipient = ? AND is_read = false AND is_deleted_by_recipient = false",@user.id)
   end
 
   def create_reminder
     @user = current_user
-    @departments = EmployeeDepartment.find(:all)
-    @new_reminder_count = Reminder.find_all_by_recipient(@user.id, :conditions=>"is_read = false")
+    @departments = EmployeeDepartment.all
+    @new_reminder_count = Reminder.where("recipient = ? AND is_read = false",@user.id)
     unless params[:send_to].nil?
       recipients_array = params[:send_to].split(",").collect{ |s| s.to_i }
       @recipients = User.active.find(recipients_array)
@@ -39,6 +39,7 @@ class ReminderController < ApplicationController
     if request.post?
       unless params[:reminder][:body] == "" or params[:recipients] == ""
         recipients_array = params[:recipients].split(",").collect{ |s| s.to_i }
+        #TODO 'use sidekiq'
         Delayed::Job.enqueue(DelayedReminderJob.new( :sender_id  => @user.id,
             :recipient_ids => recipients_array,
             :subject=>params[:reminder][:subject],
@@ -54,13 +55,13 @@ class ReminderController < ApplicationController
 
   def select_employee_department
     @user = current_user
-    @departments = EmployeeDepartment.find(:all, :conditions=>"status = true")
+    @departments = EmployeeDepartment.where("status = true")
     render :partial=>"select_employee_department"
   end
 
   def select_users
     @user = current_user
-    users = User.active.find(:all, :conditions=>"student = false")
+    users = User.active.where("student = false")
     @to_users = users.map { |s| s.id unless s.nil? }
     render :partial=>"to_users", :object => @to_users
   end
@@ -118,8 +119,8 @@ class ReminderController < ApplicationController
 
   def sent_reminder
     @user = current_user
-    @sent_reminders = Reminder.paginate(:page => params[:page], :conditions=>["sender = '#{@user.id}' and is_deleted_by_sender = false"],  :order=>"created_at DESC")
-    @new_reminder_count = Reminder.find_all_by_recipient(@user.id, :conditions=>"is_read = false")
+    @sent_reminders = Reminder.where("sender = ? AND is_deleted_by_sender = false",@user.id).order("created_at DESC").paginate(:page => params[:page])
+    @new_reminder_count = Reminder.where("recipient = ? AND is_read = false",@user.id)
   end
 
   def view_sent_reminder
@@ -207,8 +208,8 @@ class ReminderController < ApplicationController
         end
       end
     end
-    @reminders = Reminder.paginate(:page => params[:page], :conditions=>["recipient = '#{@user.id}' and is_deleted_by_recipient = false"], :order=>"created_at DESC")
-    @new_reminder_count = Reminder.find_all_by_recipient(@user.id, :conditions=>"is_read = false and is_deleted_by_recipient = false")
+    @reminders = Reminder.where("recipient = ? AND is_deleted_by_recipient = false",@user.id).order("created_at DESC").paginate(:page => params[:page])
+    @new_reminder_count = Reminder.where("recipient = ? AND is_read = false AND is_deleted_by_recipient = false",@user.id)
 
     redirect_to :action=>:index, :page=>params[:page]
   end
@@ -222,8 +223,8 @@ class ReminderController < ApplicationController
         Reminder.update(msg.id, :is_deleted_by_sender => true)
       end
     end
-    @sent_reminders = Reminder.paginate(:page => params[:page], :conditions=>["sender = '#{@user.id}' and is_deleted_by_sender = false"],  :order=>"created_at DESC")
-    @new_reminder_count = Reminder.find_all_by_recipient(@user.id, :conditions=>"is_read = false")
+    @sent_reminders = Reminder.where("sender = ? AND is_deleted_by_sender = false",@user.id).order("created_bu DESC").paginate(:page => params[:page])
+    @new_reminder_count = Reminder.where("recipient = ? AND is_read = false",@user.id)
 
     redirect_to :action=>:sent_reminder, :page=>params[:page]
   end
