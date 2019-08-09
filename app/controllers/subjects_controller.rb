@@ -17,7 +17,7 @@
 #limitations under the License.
 
 class SubjectsController < ApplicationController
-  before_filter :login_required
+  before_action :login_required
   filter_access_to :all
   def index
     @batches = Batch.active
@@ -39,11 +39,11 @@ class SubjectsController < ApplicationController
       if params[:subject][:elective_group_id] == ""
         @subjects = @subject.batch.normal_batch_subject
         @normal_subjects = @subject
-        @elective_groups = ElectiveGroup.find_all_by_batch_id(@batch.id)
+        @elective_groups = ElectiveGroup.where(:batch_id => @batch.id)
         flash[:notice] = "Subject created successfully!"
       else
         @batch = @subject.batch
-        @elective_groups = ElectiveGroup.find_all_by_batch_id(@batch.id, :conditions =>{:is_deleted=>false})
+        @elective_groups = ElectiveGroup.where(:batch_id => @batch.id,:is_deleted=>false)
         @subjects = @subject.batch.normal_batch_subject
         flash[:notice] = "Elective subject created successfully!"
       end
@@ -69,11 +69,11 @@ class SubjectsController < ApplicationController
       if params[:subject][:elective_group_id] == ""
         @subjects = @subject.batch.normal_batch_subject
         @normal_subjects = @subject
-        @elective_groups = ElectiveGroup.find_all_by_batch_id(@batch.id)
+        @elective_groups = ElectiveGroup.where(:batch_id => @batch.id)
         flash[:notice] = "Subject updated successfully!"
       else
         @batch = @subject.batch
-        @elective_groups = ElectiveGroup.find_all_by_batch_id(@batch.id, :conditions =>{:is_deleted=>false})
+        @elective_groups = ElectiveGroup.where(:batch_id => @batch.id, :is_deleted=>false)
         @subjects = @subject.batch.normal_batch_subject
         flash[:notice] = "Elective subject updated successfully!"
       end
@@ -99,7 +99,7 @@ class SubjectsController < ApplicationController
     else
       @batch = Batch.find params[:batch_id]
       @subjects = @batch.normal_batch_subject
-      @elective_groups = ElectiveGroup.find_all_by_batch_id(params[:batch_id], :conditions =>{:is_deleted=>false})
+      @elective_groups = ElectiveGroup.where(:batch_id => params[:batch_id],:is_deleted=>false)
     end
     respond_to do |format|
       format.js { render :action => 'show' }
