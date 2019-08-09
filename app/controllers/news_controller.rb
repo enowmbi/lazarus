@@ -17,7 +17,7 @@
 #limitations under the License.
 
 class NewsController < ApplicationController
-  before_filter :login_required
+  before_action :login_required
   filter_access_to :all
 
   def add
@@ -26,7 +26,7 @@ class NewsController < ApplicationController
     if request.post? and @news.save
       sms_setting = SmsSetting.new()
       if sms_setting.application_sms_active
-        students = Student.find(:all,:select=>'phone2',:conditions=>'is_sms_enabled = true')
+        students = Student.where("is_sms_enabled = true").select('phone2')
       end
       flash[:notice] = "#{t('flash1')}"
       redirect_to :controller => 'news', :action => 'view', :id => @news.id
@@ -37,7 +37,7 @@ class NewsController < ApplicationController
     @cmnt = NewsComment.new(params[:comment])
     @cmnt.author = current_user
     @cmnt.is_approved =true if @current_user.privileges.include?(Privilege.find_by_name('ManageNews')) || @current_user.admin?
-    @config = Configuration.find_by_config_key('EnableNewsCommentModeration') 
+    @config = Config.find_by_config_key('EnableNewsCommentModeration') 
     @cmnt.save
   end
 
@@ -75,7 +75,7 @@ class NewsController < ApplicationController
   def search_news_ajax
     @news = nil
     conditions = ["title LIKE ?", "%#{params[:query]}%"]
-    @news = News.find(:all, :conditions => conditions) unless params[:query] == ''
+    @news = News.where(conditions) unless params[:query] == ''
     render :layout => false
   end
 
@@ -84,7 +84,7 @@ class NewsController < ApplicationController
     @news = News.find(params[:id])
     @comments = @news.comments
     @is_moderator = @current_user.privileges.include?(Privilege.find_by_name('ManageNews')) || @current_user.admin?
-    @config = Configuration.find_by_config_key('EnableNewsCommentModeration') 
+    @config = Config.find_by_config_key('EnableNewsCommentModeration') 
   end
 
   def comment_approved
