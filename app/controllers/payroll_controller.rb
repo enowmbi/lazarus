@@ -17,12 +17,12 @@
 #limitations under the License.
 
 class PayrollController < ApplicationController
-  before_filter :login_required
+  before_action :login_required
   filter_access_to :all
 
   def add_category
-    @categories = PayrollCategory.find_all_by_is_deduction(false, :order=> "name ASC")
-    @deductionable_categories = PayrollCategory.find_all_by_is_deduction(true, :order=> "name ASC")
+    @categories = PayrollCategory.where(:is_deduction =>false).order("name ASC")
+    @deductionable_categories = PayrollCategory.where(:is_deduction => true).order("name ASC")
     @category = PayrollCategory.new(params[:category])
     if request.post? and @category.save
       flash[:notice]="#{t('flash1')}"
@@ -32,7 +32,7 @@ class PayrollController < ApplicationController
   end
 
   def edit_category
-    @categories = PayrollCategory.find(:all, :order=> "name ASC")
+    @categories = PayrollCategory.order("name ASC")
     @category = PayrollCategory.find(params[:id])
     if request.post? and @category.update_attributes(params[:category])
       flash[:notice] = "#{t('flash2')}"
@@ -42,24 +42,24 @@ class PayrollController < ApplicationController
 
   def activate_category
     category = PayrollCategory.update(params[:id], :status => true)
-    @categories = PayrollCategory.find_all_by_is_deduction(false, :order=> "name ASC")
-    @deductionable_categories = PayrollCategory.find_all_by_is_deduction(true, :order=> "name ASC")
+    @categories = PayrollCategory.where(:is_deduction => false).order("name ASC")
+    @deductionable_categories = PayrollCategory.where(:is_deduction => true).order("name ASC")
     render :partial => "category"
   end
 
   def inactivate_category
     category = PayrollCategory.update(params[:id], :status => false)
-    @categories = PayrollCategory.find_all_by_is_deduction(false, :order=> "name ASC")
-    @deductionable_categories = PayrollCategory.find_all_by_is_deduction(true, :order=> "name ASC")
+    @categories = PayrollCategory.where(:is_deduction => false).order("name ASC")
+    @deductionable_categories = PayrollCategory.where(:is_deduction => true).order("name ASC")
     render :partial => "category"
   end
 
   def delete_category
     if params[:id]
-      employees = EmployeeSalaryStructure.find(:all ,:conditions=>"payroll_category_id = #{params[:id]}")
+      employees = EmployeeSalaryStructure.where("payroll_category_id = ?",params[:id])
       if employees.empty?
         PayrollCategory.find(params[:id]).destroy
-        @departments = PayrollCategory.find :all
+        @departments = PayrollCategory.all
         flash[:notice]="#{t('flash3')}"
         redirect_to :action => "add_category"
       else
@@ -73,9 +73,9 @@ class PayrollController < ApplicationController
 
   def manage_payroll
     @employee = Employee.find(params[:id])
-    @independent_categories = PayrollCategory.find_all_by_payroll_category_id_and_status(nil, true)
-    @dependent_categories = PayrollCategory.find_all_by_status(true, :conditions=>"payroll_category_id != \'\'")
-    payroll_created = EmployeeSalaryStructure.find_all_by_employee_id(@employee.id)
+    @independent_categories = PayrollCategory.where("payroll_category_id =? AND status =?",nil, true)
+    @dependent_categories = PayrollCategory.where("status = ? AND payroll_category_id != \'\'",true)
+    payroll_created = EmployeeSalaryStructure.where(:employee_id => @employee.id)
     unless @independent_categories.empty? and @dependent_categories.empty?
       if payroll_created.empty?
         if request.post?
@@ -99,7 +99,7 @@ class PayrollController < ApplicationController
   def update_dependent_fields
     cat_id = params[:cat_id]
     amount = params[:amount]
-    @dependent_categories = PayrollCategory.find_all_by_payroll_category_id(cat_id,:conditions=>"status = true")
+    @dependent_categories = PayrollCategory.where("payroll_category_id = ? AND status = true",cat_id)
     render :update do |page|
       @dependent_categories.each do |c|
         unless c.percentage.nil?
@@ -114,8 +114,8 @@ class PayrollController < ApplicationController
 
   def edit_payroll_details
     @employee = Employee.find(params[:id])
-    @independent_categories = PayrollCategory.find_all_by_payroll_category_id_and_status(nil, true)
-    @dependent_categories = PayrollCategory.find_all_by_status(true, :conditions=>"payroll_category_id != \'\'")
+    @independent_categories = PayrollCategory.where("payroll_category_id = ? AND status = ?",nil, true)
+    @dependent_categories = PayrollCategory.where("status = ? AND payroll_category_id != \'\'",true)
     if request.post?
       params[:manage_payroll].each_pair do |k, v|
         row_id = EmployeeSalaryStructure.find_by_employee_id_and_payroll_category_id(@employee, k)
