@@ -17,7 +17,7 @@
 #limitations under the License.
 
 class SmsController < ApplicationController
-  before_filter :login_required
+  before_action :login_required
   filter_access_to :all
   
   def index
@@ -82,6 +82,7 @@ class SmsController < ApplicationController
         end
         unless @recipients.empty?
           message = params[:send_sms][:message]
+          #TODO 'use sidekiq'
           sms = Delayed::Job.enqueue(SmsManager.new(message,@recipients))
           # raise @recipients.inspect
           render(:update) do |page|
@@ -95,7 +96,7 @@ class SmsController < ApplicationController
   
   def list_students
     batch = Batch.find(params[:batch_id])
-    @students = Student.find_all_by_batch_id(batch.id,:conditions=>'is_sms_enabled=true')
+    @students = Student.where("batch_id = ? AND is_sms_enabled = true",batch.id)
   end
 
   def batches
@@ -124,6 +125,7 @@ class SmsController < ApplicationController
         end
         unless @recipients.empty?
           message = params[:send_sms][:message]
+          #TODO 'use sidekiq'
           sms = Delayed::Job.enqueue(SmsManager.new(message,@recipients))
           render(:update) do |page|
             page.replace_html 'status-message',:text=>"<p class=\"flash-msg\">#{t('sms_sending_intiated', :log_url => url_for(:controller => "sms", :action => "show_sms_messages"))}</p>"
@@ -165,6 +167,7 @@ class SmsController < ApplicationController
     end
     unless @recipients.empty?
       message = params[:send_sms][:message]
+      #TODO use sidekiq
       Delayed::Job.enqueue(SmsManager.new(message,@recipients))
       render(:update) do |page|
         page.replace_html 'status-message',:text=>"<p class=\"flash-msg\">#{t('sms_sending_intiated', :log_url => url_for(:controller => "sms", :action => "show_sms_messages"))}</p>"
@@ -188,6 +191,7 @@ class SmsController < ApplicationController
         end
         unless @recipients.empty?
           message = params[:send_sms][:message]
+          #TODO use sidekiq
           Delayed::Job.enqueue(SmsManager.new(message,@recipients))
           render(:update) do |page|
             page.replace_html 'status-message',:text=>"<p class=\"flash-msg\">#{t('sms_sending_intiated', :log_url => url_for(:controller => "sms", :action => "show_sms_messages"))}</p>"
@@ -233,7 +237,7 @@ class SmsController < ApplicationController
 
   def show_sms_messages
     @sms_messages = SmsMessage.get_sms_messages(params[:page])
-    @total_sms = Configuration.get_config_value("TotalSmsCount")
+    @total_sms = Config.get_config_value("TotalSmsCount")
   end
 
   def show_sms_logs
