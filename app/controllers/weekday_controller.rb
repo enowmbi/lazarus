@@ -17,7 +17,7 @@
 #limitations under the License.
 
 class WeekdayController < ApplicationController
-  before_filter :login_required
+  before_action :login_required
   filter_access_to :all
   def index
     @batches = Batch.active
@@ -49,7 +49,7 @@ class WeekdayController < ApplicationController
     if request.post?
       new_weekdays = params[:weekdays]||[]
       batch = params[:weekday][:batch_id].present? ?  params[:weekday][:batch_id] : nil
-      old = Weekday.find(:all,:conditions=>{:batch_id=>batch,:is_deleted=>false})
+      old = Weekday.where(:batch_id=>batch,:is_deleted=>false)
       batch_id = params[:weekday][:batch_id].present? ?  params[:weekday][:batch_id] : 0
       old_weekdays = old.map{|w| w.weekday}
       flash[:notice]  = ""
@@ -57,7 +57,7 @@ class WeekdayController < ApplicationController
         Weekday.add_day(batch_id, new)
       end
       (old_weekdays-new_weekdays).each do |week|
-        weekday = Weekday.find_by_weekday(week.to_s,:conditions=>{:batch_id=>batch})
+        weekday = Weekday.where(:weekday => week.to_s,:batch_id=>batch).first
         weekday.deactivate
       end
       flash[:notice] = "#{t('weekdays_modified')}"
