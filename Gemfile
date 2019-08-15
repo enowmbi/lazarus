@@ -51,6 +51,9 @@ gem 'will_paginate'
 #Add inplace editing
 gem 'best_in_place', '~> 3.0.1'
 
+#add delayed job
+gem 'delayed_job'
+
 
 group :development, :test do
   # Call 'byebug' anywhere in the code to stop execution and get a debugger console
