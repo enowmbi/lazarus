@@ -23,10 +23,10 @@ class ExamGroupsController < ApplicationController
   before_action :protect_other_student_data
   before_action :restrict_employees_from_exam
   before_action :protect_other_batch_exams, :only => [:show, :index]
-  # TODO in_place_edit_with_validation_for :exam_group, :name
-  # TODO in_place_edit_with_validation_for :exam, :maximum_marks
-  # TODO in_place_edit_with_validation_for :exam, :minimum_marks
-  # TODO in_place_edit_with_validation_for :exam, :weightage
+  in_place_edit_with_validation_for :exam_group, :name
+  in_place_edit_with_validation_for :exam, :maximum_marks
+  in_place_edit_with_validation_for :exam, :minimum_marks
+  in_place_edit_with_validation_for :exam, :weightage
 
   def index
     @sms_setting = SmsSetting.new
@@ -128,7 +128,7 @@ class ExamGroupsController < ApplicationController
   def protect_other_batch_exams
     @user_privileges = @current_user.privileges
     if !@current_user.admin? and !@user_privileges.map{|p| p.name}.include?('ExaminationControl') and !@user_privileges.map{|p| p.name}.include?('EnterResults')
-      @user_subjects = @current_user.employee_record.subjects.group('batch_id','id') #TODO added id to group
+      @user_subjects = @current_user.employee_record.subjects.group('batch_id','subjects.id')
       @user_batches = @user_subjects.map{|x|x.batch_id} unless @current_user.employee_record.blank? or @user_subjects.nil?
 
       unless @user_batches.include?(params[:batch_id].to_i)
