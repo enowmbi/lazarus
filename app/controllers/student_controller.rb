@@ -103,7 +103,6 @@ class StudentController < ApplicationController
           recipients.push guardian.mobile_phone unless guardian.mobile_phone.nil?
         end
         unless recipients.empty?
-          #TODO use sidekiq
           Delayed::Job.enqueue(SmsManager.new(message,recipients))
         end
       end
@@ -129,7 +128,6 @@ class StudentController < ApplicationController
           recipients.push guardian.mobile_phone unless guardian.mobile_phone.nil?
         end
         unless recipients.empty?
-          #TODO use sidekiq
           Delayed::Job.enqueue(SmsManager.new(message,recipients))
         end
       end
@@ -507,9 +505,8 @@ class StudentController < ApplicationController
   def search_ajax
     if params[:option] == "active"
       if params[:query].length>= 3
-        #TODO concat
         @students = Student.includes([{:batch => :course}]).where("first_name LIKE ? OR middle_name LIKE ? OR last_name LIKE ?
-                            OR admission_no = ? OR (concat(first_name, \" \", last_name) LIKE ? ) ",
+                            OR admission_no = ? OR (concat(first_name, ' ', last_name) LIKE ? ) ",
             "#{params[:query]}%","#{params[:query]}%","#{params[:query]}%",
             "#{params[:query]}", "#{params[:query]}").order("batch_id asc,first_name asc") unless params[:query] == ''
       else
@@ -518,9 +515,8 @@ class StudentController < ApplicationController
       render :layout => false
     else
       if params[:query].length>= 3
-        #TODO concat
         @archived_students = ArchivedStudent.includes([{:batch => :course}]).where("first_name LIKE ? OR middle_name LIKE ? OR last_name LIKE ?
-                            OR admission_no = ? OR (concat(first_name, \" \", last_name) LIKE ? ) ",
+                            OR admission_no = ? OR (concat(first_name, ' ', last_name) LIKE ? ) ",
             "#{params[:query]}%","#{params[:query]}%","#{params[:query]}%",
             "#{params[:query]}", "#{params[:query]}").order("batch_id asc,first_name asc") unless params[:query] == ''
       else
@@ -586,7 +582,6 @@ class StudentController < ApplicationController
   end
   
   def show
-    #TODO 'photo handling use active_storage
     @student = Student.find_by_admission_no(params[:id])
     send_data(@student.photo_data,
       :type => @student.photo_content_type,
@@ -618,8 +613,7 @@ class StudentController < ApplicationController
     @course = @student.old_courses.find_by_academic_year_id(params[:year]) if params[:year]
     @course ||= @student.course
     @subjects = Subject.where("course_id = ? AND no_exams = false",@course)
-    #TODO check this 
-    @examtypes = ExaminationType.find( ( @course.examinations.collect { |x| x.examination_type_id } ).uniq )
+    @examtypes = ExaminationType.find(@course.examinations.collect { |x| x.examination_type_id }).uniq 
 
     @arr_total_wt = {}
     @arr_score_wt = {}
@@ -1014,7 +1008,7 @@ class StudentController < ApplicationController
     @due_date = @fee_collection.due_date
 
     unless @financefee.transaction_id.blank?
-      @paid_fees = FinanceTransaction.where("FIND_IN_SET(id,\"#{@financefee.transaction_id}\")") #TODO find_ind_set
+      @paid_fees = FinanceTransaction.where("id IN(?)",@financefee.transaction_id) 
     end
 
     @fee_category = FinanceFeeCategory.where("id = ? AND is_deleted = false",@fee_collection.fee_category_id).first
