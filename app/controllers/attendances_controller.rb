@@ -81,8 +81,7 @@ class AttendancesController < ApplicationController
       @batch=Batch.find(@sub.batch_id)
       unless @sub.elective_group_id.nil?
         elective_student_ids = StudentsSubject.where(:subject_id => @sub.id).map { |x| x.student_id }
-        #TODO FIND_IN_SET @students = Student.find_all_by_batch_id(@batch, :conditions=>"FIND_IN_SET(id,\"#{elective_student_ids.split.join(',')}\")")
-        @students = Student.where(:batch_id => @batch,).where("FIND_IN_SET(id,\"#{elective_student_ids.split.join(',')}\")")
+        @students = Student.where("batch_id =? AND id IN (?)",@batch,elective_student_ids)
       else
         @students = Student.where(:batch_id => @batch)
       end
