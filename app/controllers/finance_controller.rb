@@ -436,7 +436,6 @@ class FinanceController < ApplicationController
     end
 
     emp_ids = dates.map{|date| date.employee_id }.uniq.join(',')
-    #TODO use sidekiq
     Delayed::Job.enqueue(PayslipTransactionJob.new(
         :salary_date => params[:date],
         :employee_id => emp_ids
@@ -451,7 +450,6 @@ class FinanceController < ApplicationController
     dates.each do |d|
       d.approve(current_user.id,params[:payslip_accept][:remark])
     end
-    #TODO 'use sidekiq'
     Delayed::Job.enqueue(PayslipTransactionJob.new(
         :salary_date => params[:id2],
         :employee_id => params[:id]
@@ -472,7 +470,6 @@ class FinanceController < ApplicationController
     hr_ids = privilege.user_ids
     subject = "#{t('payslip_rejected')}"
     body = "#{t('payslip_rejected_for')} "+ employee.first_name+" "+ employee.last_name+ " (#{t('employee_number')} : #{employee.employee_number})" +" #{t('for_the_month')} #{params[:id2].to_date.strftime("%B %Y")}"
-    #TODO 'use sidekiq'
     Delayed::Job.enqueue(DelayedReminderJob.new( :sender_id  => current_user.id,
         :recipient_ids => hr_ids,
         :subject=>subject,
@@ -1226,7 +1223,6 @@ class FinanceController < ApplicationController
             end
             new_event =  Event.create(:title=> "#{t('fees_due')}", :description =>params[:finance_fee_collection][:name], :start_date => @finance_fee_collection.due_date.to_datetime, :end_date => @finance_fee_collection.due_date.to_datetime, :is_due => true , :origin=>@finance_fee_collection)
             BatchEvent.create(:event_id => new_event.id, :batch_id => b.id )
-            #TODO use sidekiq
             Delayed::Job.enqueue(DelayedReminderJob.new( :sender_id  => @user.id,
                 :recipient_ids => recipient_ids,
                 :subject=>subject,
@@ -1300,7 +1296,6 @@ class FinanceController < ApplicationController
               recipient_ids << s.user.id
             end
           end
-          #TODO use sidekiq
           Delayed::Job.enqueue(DelayedReminderJob.new( :sender_id  => @user.id,
               :recipient_ids => recipient_ids,
               :subject=>subject,
@@ -1362,8 +1357,7 @@ class FinanceController < ApplicationController
       @financefee = @student.finance_fee_by_date @date
       @due_date = @fee_collection.due_date
       unless @financefee.transaction_id.blank?
-        #TODO find_in_set
-        @paid_fees = FinanceTransaction.where("FIND_IN_SET(id,\"#{@financefee.transaction_id}\")").order("created_at ASC")
+        @paid_fees = FinanceTransaction.where("id in (?)",@financefee.transaction_id).order("created_at ASC")
       end
       @fee_category = FinanceFeeCategory.where(:id => @fee_collection.fee_category_id,:is_deleted => false)
       @fee_particulars = @date.fees_particulars(@student)
@@ -1396,7 +1390,7 @@ class FinanceController < ApplicationController
     @dates = FinanceFeeCollection.find(:all)
     @date = @fee_collection = FinanceFeeCollection.find(params[:date])
     @student = Student.find(params[:student]) if params[:student]
-    @student ||= FinanceFee.joins(:students).where("fee_collection_id = ?",@date.id).first #TODO '.student at the end
+    @student ||= FinanceFee.joins(:students).where("fee_collection_id = ?",@date.id).first
     @prev_student = @student.previous_fee_student(@date.id)
     @next_student = @student.next_fee_student(@date.id)
     @due_date = @fee_collection.due_date
@@ -1449,15 +1443,13 @@ class FinanceController < ApplicationController
 
         is_paid = (params[:fees][:fees_paid].to_f == params[:total_fees].to_f) ? true : false
         @financefee.update_attributes(:transaction_id=>tid, :is_paid=>is_paid)
-        #TODO find_in_set
-        @paid_fees = FinanceTransaction.where("FIND_IN_SET(id,\"#{tid}\")")
+        @paid_fees = FinanceTransaction.where("id in (?)",tid)
       else
-        #TODO find_in_set
-        @paid_fees = FinanceTransaction.where("FIND_IN_SET(id,\"#{@financefee.transaction_id}\")")
+        @paid_fees = FinanceTransaction.where("id in (?)",@financefee.transaction_id)
         @financefee.errors.add_to_base("#{t('flash19')}")
       end
     else
-      @paid_fees = FinanceTransaction.where("FIND_IN_SET(id,\"#{@financefee.transaction_id}\")")
+      @paid_fees = FinanceTransaction.where("id in (?)",@financefee.transaction_id)
       @financefee.errors.add_to_base("#{t('flash23')}")
     end
     render :update do |page|
@@ -1474,8 +1466,7 @@ class FinanceController < ApplicationController
     @due_date = @fee_collection.due_date
     
     unless @financefee.transaction_id.blank?
-      #TODO find_in_set
-      @paid_fees = FinanceTransaction.where("FIND_IN_SET(id,\"#{@financefee.transaction_id}\")").order("created_at ASC")
+      @paid_fees = FinanceTransaction.where("id in (?)",@financefee.transaction_id).order("created_at ASC")
     end
     @fee_category = FinanceFeeCategory.where("id = ? AND is_deleted = false",@fee_collection.fee_category_id).first
     @fee_particulars = @date.fees_particulars(@student)
@@ -1507,14 +1498,13 @@ class FinanceController < ApplicationController
       @dates = FinanceFeeCollection.all
       @date = @fee_collection = FinanceFeeCollection.find(params[:fine][:date])
       @student = Student.find(params[:fine][:student]) if params[:fine][:student]
-      @student ||= FinanceFee.joins(:student).where("fee_collection_id = ?",@date.id).first #TODO .student at the end
+      @student ||= FinanceFee.joins(:student).where("fee_collection_id = ?",@date.id).first 
       @prev_student = @student.previous_fee_student(@date.id)
       @next_student = @student.next_fee_student(@date.id)
       
       @financefee = @student.finance_fee_by_date @date
       unless @financefee.transaction_id.blank?
-        #TODO find_in_set
-        @paid_fees = FinanceTransaction.where("FIND_IN_SET(id,\"#{@financefee.transaction_id}\")").order("created_at ASC")
+        @paid_fees = FinanceTransaction.where("where id IN (?)",@financefee.transaction_id).order("created_at ASC")
       end
       unless params[:fine][:fee].to_f < 0
         @fine = (params[:fine][:fee])
@@ -1548,9 +1538,8 @@ class FinanceController < ApplicationController
   def search_logic                 #student search (fees submission)
     query = params[:query]
     if query.length>= 3
-      #TODO concat
       @students_result = Student.where("first_name LIKE ? OR middle_name LIKE ? OR last_name LIKE ?
-                            OR admission_no = ? OR (concat(first_name, \" \", last_name) LIKE ? ) ",
+                            OR admission_no = ? OR (concat(first_name, ' ', last_name) LIKE ? ) ",
           "#{query}%","#{query}%","#{query}%",
           "#{query}", "#{query}").order("batch_id asc,first_name asc") unless query == ''
     else
@@ -1566,17 +1555,14 @@ class FinanceController < ApplicationController
   end
 
   def fees_submission_student
-    
     @student = Student.find(params[:id])
     @date = @fee_collection = FinanceFeeCollection.find(params[:date])
     @financefee = @student.finance_fee_by_date(@date)
-    
     @due_date = @fee_collection.due_date
     @fee_category = FinanceFeeCategory.where("id  = ? AND is_deleted IS NOT NULL",@fee_collection.fee_category_id).first
     @fee_particulars = @date.fees_particulars(@student)
     unless @financefee.transaction_id.blank?
-      #TODO find_in_set
-      @paid_fees = FinanceTransaction.where("FIND_IN_SET(id,\"#{@financefee.transaction_id}\")")
+      @paid_fees = FinanceTransaction.where("id IN(?)",@financefee.transaction_id)
     end
 
     @batch_discounts = BatchFeeCollectionDiscount.where(:finance_fee_collection_id => @fee_collection.id)
@@ -1590,7 +1576,6 @@ class FinanceController < ApplicationController
       @total_discount = [@batch_discounts,@student_discounts,@category_discounts].flatten.compact.map{|s| s.total_payable(@student) * s.discount(@student) / 100}.sum.to_f
     end
     @total_discount_percentage = [@batch_discounts,@student_discounts,@category_discounts].flatten.compact.map{|s| s.discount(@student)}.sum
-    
     render :update do |page|
       page.replace_html "fee_submission", :partial => "fees_submission_form"
     end
@@ -1703,9 +1688,8 @@ class FinanceController < ApplicationController
   def fees_student_structure_search_logic # student search fees structure
     query = params[:query]
     unless query.length < 3
-      #TODO concat
       @students_result = Student.where("first_name LIKE ? OR middle_name LIKE ? OR last_name LIKE ?
-                         OR admission_no = ? OR (concat(first_name, \" \", last_name) LIKE ? ) ",
+                         OR admission_no = ? OR (concat(first_name, ' ', last_name) LIKE ? ) ",
                          "#{query}%","#{query}%","#{query}%","#{query}", "#{query}").order("batch_id asc,first_name asc") unless query == ''
     else
       @students_result = Student.where("admission_no = ? " , query).order("batch_id asc,first_name asc") unless query == ''
@@ -1819,8 +1803,7 @@ class FinanceController < ApplicationController
     @total_discount_percentage = [@batch_discounts,@student_discounts,@category_discounts].flatten.compact.map{|s| s.discount(@student)}.sum
     
     unless @financefee.transaction_id.blank?
-      #TODO find_in_set
-      @paid_fees = FinanceTransaction.where("FIND_IN_SET(id,\"#{@financefee.transaction_id}\")").order("created_at ASC")
+      @paid_fees = FinanceTransaction.where("id IN (?)",@financefee.transaction_id).order("created_at ASC")
     end
     total_fees = 0
     @fee_particulars.each do |p|
@@ -1851,7 +1834,7 @@ class FinanceController < ApplicationController
           is_paid = (params[:fees][:fees_paid].to_f == params[:total_fees].to_f) ? true : false
           @financefee.update_attributes(:transaction_id=>tid, :is_paid=>is_paid)
 
-          @paid_fees = FinanceTransaction.where("FIND_IN_SET(id,\"#{tid}\")")   #TODO find_in_set
+          @paid_fees = FinanceTransaction.where("id IN (?)",tid)  
           flash[:notice] = "#{t('flash14')}"
           redirect_to  :action => "pay_fees_defaulters",:id => @student,:date => @date
         else
