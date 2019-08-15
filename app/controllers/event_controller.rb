@@ -188,7 +188,6 @@ class EventController < ApplicationController
         end
         unless recipients.empty?
           message = "#{t('event_notification')}: #{event.title}.#{t('from')} : #{event.start_date} #{t('to')} #{event.end_date}"
-          #TODO 'use sidekiq - see below'
           Delayed::Job.enqueue(SmsManager.new(message,recipients))
         end
       end
@@ -244,7 +243,6 @@ class EventController < ApplicationController
         Delayed::Job.enqueue(SmsManager.new(message,recipients))
       end
     end
-    #TODO 'sidekiq '
     Delayed::Job.enqueue(DelayedReminderJob.new( :sender_id  => current_user.id,
         :recipient_ids => reminder_recipient_ids,
         :subject=>reminder_subject,
