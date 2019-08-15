@@ -39,7 +39,7 @@ class CalendarController < ApplicationController
     @notifications = Hash.new{|h,k| h[k]=Array.new}
     first_day = @show_month.beginning_of_month
     last_day =  @show_month.end_of_month
-    @events = Event.where(["(start_date >= ? and end_date <= ?) or (start_date <= ? and end_date <= ?)  or (start_date>=? and end_date>=?) or (start_date<=? and end_date>=?) ", first_day, last_day, first_day,last_day, first_day,last_day,first_day,last_day])
+    @events = Event.where("(start_date >= ? and end_date <= ?) or (start_date <= ? and end_date <= ?)  or (start_date>=? and end_date>=?) or (start_date<=? and end_date>=?) ", first_day, last_day, first_day,last_day, first_day,last_day,first_day,last_day)
     load_notifications
 
   end
@@ -59,7 +59,7 @@ class CalendarController < ApplicationController
     @notifications = Hash.new{|h,k| h[k]=Array.new}
     first_day = @show_month.beginning_of_month
     last_day =  @show_month.end_of_month
-    @events = Event.where(["(start_date >= ? and end_date <= ?) or (start_date <= ? and end_date <= ?)  or (start_date>=? and end_date>=?) or (start_date<=? and end_date>=?) ", first_day, last_day, first_day,last_day, first_day,last_day,first_day,last_day])
+    @events = Event.where("(start_date >= ? and end_date <= ?) or (start_date <= ? and end_date <= ?)  or (start_date>=? and end_date>=?) or (start_date<=? and end_date>=?) ", first_day, last_day, first_day,last_day, first_day,last_day,first_day,last_day)
     load_notifications
     render :update do |page|
       page.replace_html 'calendar', :partial => 'month',:object => @show_month
@@ -265,7 +265,6 @@ class CalendarController < ApplicationController
   def show_due_tooltip
     @user = current_user
     @date = params[:id].to_date
-    #TODO finance_due_check = Event.find_all_by_is_due(true,true, :conditions => " events.start_date >= '#{@date.strftime("%Y-%m-%d 00:00:00")}' AND events.start_date <= '#{@date.strftime("%Y-%m-%d 23:59:59")}'")
     finance_due_check = Event.where("is_due = ? AND events.start_date >= ? AND events.start_date <= ?",true,@date.strftime("%Y-%m-%d 00:00:00"),@date.strftime("%Y-%m-%d 23:59:59"))
     finance_due_check.reject!{|x| !x.is_active_event }
     if @user.student? or @user.parent?
