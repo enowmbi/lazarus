@@ -778,7 +778,6 @@ class EmployeeController < ApplicationController
 
   def show
     @employee = Employee.find(params[:id])
-    #TODO see below
     send_data(@employee.photo_data, :type => @employee.photo_content_type, :filename => @employee.photo_filename, :disposition => 'inline')
   end
 
@@ -806,7 +805,7 @@ class EmployeeController < ApplicationController
       end
 
       @new_payslip_category = IndividualPayslipCategory.where("employee_id = ? AND salary_date = ? ",@employee.id,nil)
-      @individual = IndividualPayslipCategory.where("employee_id = ? AND salary_date = ? ",@employee.id,@salary_date) #TODO .first
+      @individual = IndividualPayslipCategory.where("employee_id = ? AND salary_date = ? ",@employee.id,@salary_date).first
       render :partial => "payslip_category_list",:locals => {:emp_id => @employee.id, :salary_date=>@salary_date}
     else
       render :partial => "payslip_category_form"
@@ -1101,8 +1100,7 @@ class EmployeeController < ApplicationController
   def update_rejected_employee_list
     department_id = params[:department_id]
     #@employees = Employee.find_all_by_employee_department_id(department_id)
-    #TODO see below @employees = MonthlyPayslip.find(:all, :conditions =>"is_rejected is true", :group=>'employee_id', :joins=>"INNER JOIN employees on monthly_payslips.employee_id = employees.id")
-    @employees = MonthlyPayslip.joins(:employee).where("monthly_payslips.is_rejected =true").group('employee_id,id') #TODO added id in group
+    @employees = MonthlyPayslip.joins(:employee).where("monthly_payslips.is_rejected =true").group('employee_id,monthly_payslips.id') 
     @employees.reject!{|x| x.employee.employee_department_id != department_id.to_i}
 
     render :update do |page|
