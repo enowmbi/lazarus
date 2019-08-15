@@ -20,7 +20,6 @@ class ScheduledJobsController < ApplicationController
   before_action :login_required
   filter_access_to :all
   def index
-    #TODO 'use sidekiq"
     @jobs = Delayed::Job.all
     @all_jobs = @jobs.dup
     unless params[:job_object].nil? and params[:job_type].nil?
