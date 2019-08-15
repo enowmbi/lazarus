@@ -1148,7 +1148,6 @@ class EmployeeController < ApplicationController
       available_user_ids = privilege.user_ids
       subject = "#{t('rejected_payslip_regenerated')}"
       body = "#{t('payslip_has_been_generated_for')}"+@employee.first_name+" "+@employee.last_name + " (#{t('employee_number')} :#{@employee.employee_number})" + " #{t('for_the_month')} #{salary_date.to_date.strftime("%B %Y")}. #{t('kindly_approve')}"
-      #TODO 'Change delayed job to sidekiq - see below"
       Delayed::Job.enqueue(DelayedReminderJob.new( :sender_id  => @user.id,
           :recipient_ids => available_user_ids,
           :subject=>subject,
@@ -1243,7 +1242,6 @@ class EmployeeController < ApplicationController
     employees = Employee.find(:all)
     unless(finance_manager.nil? and finance.nil?)
       finance_manager_ids = Privilege.find_by_name('FinanceControl').user_ids
-      #TODO 'move below to sidekiq'
       Delayed::Job.enqueue(DelayedReminderJob.new( :sender_id  => @user.id,
           :recipient_ids => finance_manager_ids,
           :subject=>subject,
