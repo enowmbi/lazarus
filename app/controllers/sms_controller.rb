@@ -82,7 +82,6 @@ class SmsController < ApplicationController
         end
         unless @recipients.empty?
           message = params[:send_sms][:message]
-          #TODO 'use sidekiq'
           sms = Delayed::Job.enqueue(SmsManager.new(message,@recipients))
           # raise @recipients.inspect
           render(:update) do |page|
@@ -125,7 +124,6 @@ class SmsController < ApplicationController
         end
         unless @recipients.empty?
           message = params[:send_sms][:message]
-          #TODO 'use sidekiq'
           sms = Delayed::Job.enqueue(SmsManager.new(message,@recipients))
           render(:update) do |page|
             page.replace_html 'status-message',:text=>"<p class=\"flash-msg\">#{t('sms_sending_intiated', :log_url => url_for(:controller => "sms", :action => "show_sms_messages"))}</p>"
@@ -167,7 +165,6 @@ class SmsController < ApplicationController
     end
     unless @recipients.empty?
       message = params[:send_sms][:message]
-      #TODO use sidekiq
       Delayed::Job.enqueue(SmsManager.new(message,@recipients))
       render(:update) do |page|
         page.replace_html 'status-message',:text=>"<p class=\"flash-msg\">#{t('sms_sending_intiated', :log_url => url_for(:controller => "sms", :action => "show_sms_messages"))}</p>"
@@ -191,7 +188,6 @@ class SmsController < ApplicationController
         end
         unless @recipients.empty?
           message = params[:send_sms][:message]
-          #TODO use sidekiq
           Delayed::Job.enqueue(SmsManager.new(message,@recipients))
           render(:update) do |page|
             page.replace_html 'status-message',:text=>"<p class=\"flash-msg\">#{t('sms_sending_intiated', :log_url => url_for(:controller => "sms", :action => "show_sms_messages"))}</p>"
