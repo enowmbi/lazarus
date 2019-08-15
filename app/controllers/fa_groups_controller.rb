@@ -78,8 +78,7 @@ class FaGroupsController < ApplicationController
   end
 
   def select_subjects
-    #TODO  @subjects = Subject.find(:all,:joins=>:batch, :conditions=>{:batches=>{:course_id=>params[:course_id]},:is_deleted=>false},:group=>:code)
-    @subjects = Subject.joins(:batch).where("batches.course_id = ? AND subjects.is_deleted = false",params[:course_id]).group(:code,:id)
+    @subjects = Subject.joins(:batch).where("batches.course_id = ? AND subjects.is_deleted = false",params[:course_id]).group("code","subjects.id")
     render :update do |page|
       page.replace_html 'subjects', :partial => 'subjects', :object => @subjects
     end
@@ -99,8 +98,7 @@ class FaGroupsController < ApplicationController
 
   def update_subject_fa_groups
     @subject=Subject.find(params[:id])
-    #TODO ':readonly=>false) checkbelow'  subjects=Subject.find(:all,:joins=>:batch,:readonly=>false, :conditions=>{:code=>@subject.code, :is_deleted=>false,:batches=>{:course_id=>@subject.batch.course_id}})
-    subjects=Subject.joins(:batch).where(:code=>@subject.code, :is_deleted=>false,:batches=>{:course_id=>@subject.batch.course_id})
+    subjects=Subject.joins(:batch).where(:code=>@subject.code, :is_deleted=>false,:batches=>{:course_id=>@subject.batch.course_id}).readonly(:true)
     new_fa_groups = params[:subject][:fa_group_ids] if params[:subject]
     new_fa_groups ||= []
     fa_groups = FaGroup.where(:id => new_fa_groups)
