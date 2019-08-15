@@ -47,7 +47,6 @@ class AttendanceReportsController < ApplicationController
         if @batch.employee_id.to_i==@current_user.employee_record.id
           @subjects= @batch.subjects
         else
-          # TODO @subjects= Subject.find(:all,:joins=>"INNER JOIN employees_subjects ON employees_subjects.subject_id = subjects.id AND employee_id = #{@current_user.employee_record.id} AND batch_id = #{@batch.id} ")
           @subjects= Subject.joins(:employees_subjects).where("employee_id = ? AND batch_id = ? ",@current_user.employee_record.id,@batch.id)
         end
       end
