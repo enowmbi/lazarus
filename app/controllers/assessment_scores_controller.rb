@@ -18,7 +18,7 @@
 
 class AssessmentScoresController < ApplicationController
   before_action :login_required
- #TODO filter_access_to :all
+  filter_access_to :all
   def exam_fa_groups
     @exam=Exam.find params[:id]
     @batch=@exam.subject.batch
@@ -69,7 +69,7 @@ class AssessmentScoresController < ApplicationController
     end
     di=@fa_criterias.collect(&:descriptive_indicator_ids).flatten
     @scores=Hash.new { |h, k| h[k] = Hash.new(&h.default_proc) }
-    scores=AssessmentScore.where({:student_id=>@student.id,:batch_id=>@batch.id,:descriptive_indicator_id=>di, :exam_id=>@exam.id}).group_by(&:student_id)
+    scores=AssessmentScore.where(student_id=>@student.id,:batch_id=>@batch.id,:descriptive_indicator_id=>di, :exam_id=>@exam.id).group_by(&:student_id)
     scores.each do |k,v|
       @scores[k]=v.group_by{|g| g.descriptive_indicator_id}
     end
@@ -142,7 +142,6 @@ class AssessmentScoresController < ApplicationController
     @grading_levels=@observation_group.cce_grade_set.cce_grades
     di=@observations.collect(&:descriptive_indicator_ids).flatten
     @scores=Hash.new { |h, k| h[k] = Hash.new(&h.default_proc) }
-    #TODO 'check  difference between group_by and group  - see below
     scores=AssessmentScore.where(:student_id=>@student.id,:batch_id=>@batch.id,:descriptive_indicator_id=>di).group_by(&:student_id)
     scores.each do |k,v|
       @scores[k]=v.group_by{|g| g.descriptive_indicator_id}
