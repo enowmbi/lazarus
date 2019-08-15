@@ -25,15 +25,13 @@ class BatchTransfersController < ApplicationController
   end
 
   def show
-    #TODO @batch = Batch.find params[:id], :include => [:students],:order => "students.first_name ASC"
-    @batch = Batch.find(params[:id]).includes(:students).order("students.first_name ASC")
+    @batch = Batch.includes(:students).order("students.first_name ASC").find(params[:id])
     @batches = Batch.active - @batch.to_a
   end
 
   def transfer
     if request.post?
-      #TODO @batch = Batch.find params[:id], :include => [:students],:order => "students.first_name ASC"
-      @batch = Batch.find(params[:id]).includes(:students).order("students.first_name ASC")
+      @batch = Batch.includes(:students).order("students.first_name ASC").find(params[:id])
       if params[:transfer][:to].present?
         unless params[:transfer][:students].nil?
           students = Student.find(params[:transfer][:students])
@@ -128,7 +126,6 @@ class BatchTransfersController < ApplicationController
   def assign_previous_batch_subject
     subject = Subject.find(params[:id])
     batch = Batch.find(params[:id2])
-    #TODO sub_exists = Subject.find_by_batch_id_and_name(batch.id,subject.name, :conditions => { :is_deleted => false})
     sub_exists = Subject.where(:batch_id => batch.id,:name =>subject.name,:is_deleted => false).first
     if sub_exists.nil?
       if subject.elective_group_id == nil
@@ -169,7 +166,6 @@ class BatchTransfersController < ApplicationController
     @previous_batch = all_batches[all_batches.size-2]
     subjects = Subject.where("batch_id = ? AND is_deleted = false",@previous_batch.id)
     subjects.each do |subject|
-      #TODO sub_exists = Subject.find_by_batch_id_and_name(batch.id,subject.name, :conditions => { :is_deleted => false})
       sub_exists = Subject.where(:batch_id => batch.id,:name => subject.name, :is_deleted => false).first
       if sub_exists.nil?
         if subject.elective_group_id.nil?
