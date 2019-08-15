@@ -72,7 +72,6 @@ class ExamController < ApplicationController
     if params[:status] == "schedule"
       students = Student.where("batch_id = ?",@batch.id).select(:user_id)
       available_user_ids = students.collect(&:user_id).compact
-      #TODO 'use sidekiq'
       Delayed::Job.enqueue(
         DelayedReminderJob.new( :sender_id  => current_user.id,
           :recipient_ids => available_user_ids,
@@ -101,7 +100,6 @@ class ExamController < ApplicationController
             @message = "#{@exam_group.name} #{t('exam_timetable_published')}" if params[:status] == "schedule"
             @message = "#{@exam_group.name} #{t('exam_result_published')}" if params[:status] == "result"
             unless recipients.empty?
-              #TODO 'use sidekiq'
               sms = Delayed::Job.enqueue(SmsManager.new(@message,recipients))
             end
           end
@@ -115,7 +113,6 @@ class ExamController < ApplicationController
       if params[:status] == "result"
         students = Student.where("batch_id = ?",@batch.id).select(:user_id)
         available_user_ids = students.collect(&:user_id).compact
-        #TODO 'sidekiq'
         Delayed::Job.enqueue(
           DelayedReminderJob.new( :sender_id  => current_user.id,
             :recipient_ids => available_user_ids,
@@ -183,7 +180,6 @@ class ExamController < ApplicationController
         @batches = Batch.find_all_by_id(params[:report][:batch_ids])
         @batches.each do|batch|
           batch.job_type = "2"
-          #TODO 'sidekiq'
           Delayed::Job.enqueue(batch)
         end
         flash[:notice]="Report generation in queue for batches #{@batches.collect(&:full_name).join(", ")}. <a href='/scheduled_jobs/Batch/2'>Click Here</a> to view the scheduled job."
@@ -229,7 +225,6 @@ class ExamController < ApplicationController
       if @batches
         @batches.each do|batch|
           batch.job_type = "1"
-          #TODO use sidekiq'
           Delayed::Job.enqueue(batch)
         end
         flash[:notice]="Report generation in queue for batches #{@batches.collect(&:full_name).join(", ")}. <a href='/scheduled_jobs/Batch/1'>Click Here</a> to view the scheduled job."
@@ -1348,7 +1343,7 @@ class ExamController < ApplicationController
     if current_user.admin or privilege.include?("ExaminationControl") or privilege.include?("EnterResults")
       @course= Course.where(:is_deleted => false).order('code asc')
     elsif current_user.employee
-      @course= current_user.employee_record.subjects.group('batch_id','id').map{|x|x.batch.course} #TODO added id to group
+      @course= current_user.employee_record.subjects.group('batch_id','subjects.id').map{|x|x.batch.course} 
     end
   end
 
