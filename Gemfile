@@ -4,7 +4,7 @@ git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 ruby '2.5.1'
 
 # Bundle edge Rails instead: gem 'rails', github: 'rails/rails'
-gem 'rails', '~> 5.2.2'
+gem 'rails', '~> 5.2.3'
 # Use postgresql as the database for Active Record
 gem 'pg', '>= 0.18', '< 2.0'
 # Use Puma as the app server
@@ -57,6 +57,12 @@ group :development, :test do
 
   #Add test coverage 
   gem 'simplecov', require: false
+
+  #Add spec-writer for writing specs
+  gem 'spec_writer'
+
+  #Add factory_bot rails 
+  gem 'factory_bot_rails'
 end
 
 group :development do
