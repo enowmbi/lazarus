@@ -358,7 +358,7 @@ class EmployeeAttendanceController < ApplicationController
     @applied_employee = Employee.find(@applied_leave.employee_id)
     @leave_type = EmployeeLeaveType.find(@applied_leave.employee_leave_types_id)
     @manager = @applied_employee.reporting_manager_id
-    @leave_count = EmployeeLeave.where("employee_id = ? AND employee_leave_type_id =? ",@applied_employee.id,@leave_type.id) #TODO .first
+    @leave_count = EmployeeLeave.where("employee_id = ? AND employee_leave_type_id =? ",@applied_employee.id,@leave_type.id).first
   end
 
   def leave_app
@@ -390,7 +390,7 @@ class EmployeeAttendanceController < ApplicationController
           EmployeeAttendance.create(:attendance_date=>d, :employee_id=>@applied_employee.id,:employee_leave_type_id=>@applied_leave.employee_leave_types_id, :reason => @applied_leave.reason, :is_half_day => @applied_leave.is_half_day)
           att = EmployeeAttendance.find_by_attendance_date(d)
           EmployeeAttendance.update(att.id, :is_half_day => @applied_leave.is_half_day)
-          @reset_count = EmployeeLeave.where("employee_id =? AND employee_leave_type_id = ?",@applied_leave.employee_id,@applied_leave.employee_leave_types_id) #TODO .first
+          @reset_count = EmployeeLeave.where("employee_id =? AND employee_leave_type_id = ?",@applied_leave.employee_id,@applied_leave.employee_leave_types_id).first
           leave_taken = @reset_count.leave_taken
           if @applied_leave.is_half_day
             leave_taken += 0.5
