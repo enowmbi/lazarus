@@ -47,6 +47,10 @@ gem 'deferred_associations'
 
 #Add pagination
 gem 'will_paginate'
+ 
+#Add inplace editing
+gem 'best_in_place', '~> 3.0.1'
+
 
 group :development, :test do
   # Call 'byebug' anywhere in the code to stop execution and get a debugger console
