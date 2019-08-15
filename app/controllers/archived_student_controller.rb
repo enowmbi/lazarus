@@ -17,7 +17,7 @@
 #limitations under the License.
 
 class ArchivedStudentController < ApplicationController
-  #TODO filter_access_to :all
+  filter_access_to :all
   before_action :login_required
 
   def profile
@@ -28,13 +28,12 @@ class ArchivedStudentController < ApplicationController
 
   def show
     @student = ArchivedStudent.find_by_admission_no(params[:id])
-    #TODO send_data(@student.photo_data,type => @student.photo_content_type,:filename => @student.photo_filename,:disposition => 'inline')
+    send_data(@student.photo_data,type => @student.photo_content_type,:filename => @student.photo_filename,:disposition => 'inline')
   end
 
   def guardians
     @archived_student = ArchivedStudent.find(params[:id])
-    #TODO @parents = ArchivedGuardian.find(:all, :conditions=>"ward_id = #{@archived_student.id}")
-    @parents = ArchivedGuardian.where(["ward_id = ?", @archived_student.id])
+    @parents = ArchivedGuardian.where("ward_id = ?", @archived_student.id)
   end
 
 
@@ -48,9 +47,9 @@ class ArchivedStudentController < ApplicationController
   def reports
     @student= ArchivedStudent.find params[:id]
     @batch = @student.batch
-    @grouped_exams = GroupedExam.where(["batch_id = ?", @batch.id])
-    @normal_subjects = Subject.where(["batch_id = ? AND no_exams = false AND elective_group_id IS NULL AND is_deleted = false",@batch.id])
-    @student_electives = StudentsSubject.where(["student_id = ? AND batch_id = ?",@student.former_id,@batch.id])
+    @grouped_exams = GroupedExam.where("batch_id = ?", @batch.id)
+    @normal_subjects = Subject.where("batch_id = ? AND no_exams = false AND elective_group_id IS NULL AND is_deleted = false",@batch.id)
+    @student_electives = StudentsSubject.where("student_id = ? AND batch_id = ?",@student.former_id,@batch.id)
     @elective_subjects = []
     @student_electives.each do |e|
       @elective_subjects.push Subject.find(e.subject_id)
