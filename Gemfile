@@ -53,6 +53,7 @@ gem 'best_in_place', '~> 3.0.1'
 
 #add delayed job
 gem 'delayed_job'
+gem 'delayed_job_active_record'
 
 #Add gem for CD / CI
 gem 'travis'
