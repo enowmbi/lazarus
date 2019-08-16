@@ -4,39 +4,33 @@
 require 'rails_helper'
 
 RSpec.describe Course, type: :model do
+
   it "should have a valid factory" do
     course = FactoryBot.build(:course)
     expect(course).to be_valid
   end
 
-  xdescribe "Validators" do
+  describe "Validators" do
 
-
-
-    xit "should ensure the presence of course_name" do
+    it "should ensure the presence of course_name" do
       course = FactoryBot.build(:course, course_name: nil)
       expect(course).not_to be_valid
       expect(course.errors[:course_name]).to be_present
     end
 
-    xit "should ensure the presence of code" do
+    it "should ensure the presence of code" do
       course = FactoryBot.build(:course, code: nil)
       expect(course).not_to be_valid
       expect(course.errors[:code]).to be_present
     end
 
-
-
-
   end
 
 
 
-  xdescribe "Associations" do
+  describe "Associations" do
 
-
-
-    xit "should allow multiple batches" do
+    it "should allow multiple batches" do
       course = FactoryBot.create(:course)
 
       3.times.each do |n|
@@ -48,8 +42,7 @@ RSpec.describe Course, type: :model do
       end
     end
 
-
-    xit "should allow multiple batch_groups" do
+    it "should allow multiple batch_groups" do
       course = FactoryBot.create(:course)
 
       3.times.each do |n|
@@ -62,7 +55,7 @@ RSpec.describe Course, type: :model do
     end
 
 
-    xit "should allow multiple ranking_levels" do
+    it "should allow multiple ranking_levels" do
       course = FactoryBot.create(:course)
 
       3.times.each do |n|
@@ -75,7 +68,7 @@ RSpec.describe Course, type: :model do
     end
 
 
-    xit "should allow multiple class_designations" do
+    it "should allow multiple class_designations" do
       course = FactoryBot.create(:course)
 
       3.times.each do |n|
@@ -88,7 +81,7 @@ RSpec.describe Course, type: :model do
     end
 
 
-    xit "should allow multiple subject_amounts" do
+    it "should allow multiple subject_amounts" do
       course = FactoryBot.create(:course)
 
       3.times.each do |n|
@@ -100,59 +93,51 @@ RSpec.describe Course, type: :model do
       end
     end
 
-
   end
 
 
+  describe "Graceful Destroyal" do
 
-  xdescribe "Graceful Destroyal" do
-
-
-
-
-    xit "should destroy the associated batches when deleted" do
+    it "should destroy the associated batches when deleted" do
       course = FactoryBot.create(:course)
       course.batches.create(FactoryBot.attributes_for(:batch))
 
-      expect{ course.destroy }.to change(Batch, :count).by -1
+      expect{ course.destroy }.to change(Batch, :count).by(-1)
     end
 
 
-    xit "should destroy the associated batch_groups when deleted" do
+    it "should destroy the associated batch_groups when deleted" do
       course = FactoryBot.create(:course)
       course.batch_groups.create(FactoryBot.attributes_for(:batch_group))
 
-      expect{ course.destroy }.to change(BatchGroup, :count).by -1
+      expect{ course.destroy }.to change(BatchGroup, :count).by(-1)
     end
 
 
-    xit "should destroy the associated ranking_levels when deleted" do
+    it "should destroy the associated ranking_levels when deleted" do
       course = FactoryBot.create(:course)
       course.ranking_levels.create(FactoryBot.attributes_for(:ranking_level))
 
-      expect{ course.destroy }.to change(RankingLevel, :count).by -1
+      expect{ course.destroy }.to change(RankingLevel, :count).by(-1)
     end
 
 
-    xit "should destroy the associated class_designations when deleted" do
+    it "should destroy the associated class_designations when deleted" do
       course = FactoryBot.create(:course)
       course.class_designations.create(FactoryBot.attributes_for(:class_designation))
 
-      expect{ course.destroy }.to change(ClassDesignation, :count).by -1
+      expect{ course.destroy }.to change(ClassDesignation, :count).by(-1)
     end
 
 
-    xit "should destroy the associated subject_amounts when deleted" do
+    it "should destroy the associated subject_amounts when deleted" do
       course = FactoryBot.create(:course)
       course.subject_amounts.create(FactoryBot.attributes_for(:subject_amount))
 
-      expect{ course.destroy }.to change(SubjectAmount, :count).by -1
+      expect{ course.destroy }.to change(SubjectAmount, :count).by(-1)
     end
 
   end
 
 
-  xdescribe "Behavior" do
-    pending "add some examples to #{__FILE__} for behaviours or delete the 'Behaviour' test there."
-  end
 end
