@@ -314,7 +314,7 @@ class TimetableController < ApplicationController
 
       @timetables=Timetable.all
       ## Prints out timetable of all teachers
-      @current=Timetable.where("timetables.start_date <= ? AND timetables.end_date >= ?",@local_tzone_time.to_date,@local_tzone_time.to_date]).first
+      @current=Timetable.where("timetables.start_date <= ? AND timetables.end_date >= ?",@local_tzone_time.to_date,@local_tzone_time.to_date).first
       unless @current.nil?
         @electives=@employee.subjects.group_by(&:elective_group_id)
         @timetable_entries = Hash.new { |l, k| l[k] = Hash.new(&l.default_proc) }
@@ -472,7 +472,7 @@ class TimetableController < ApplicationController
         flash[:notice] = t('updated_with_errors')
       end
     end
-    @batches = Batch.includes([{:subjects => :employees},:course]).active #TODO add .scoped
+    @batches = Batch.active.includes([{:subjects => :employees},:course])
     @subjects = @batches.collect(&:subjects).flatten
   end
   def timetable
