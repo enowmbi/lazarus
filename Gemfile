@@ -57,6 +57,8 @@ gem 'delayed_job_active_record'
 
 #Add gem for CD / CI
 gem 'travis'
+gem 'coveralls', require: false
+
 
 
 group :development, :test do
