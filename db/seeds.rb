@@ -44,7 +44,7 @@ if GradingLevel.count == 0
 end
 
 
-if User.first( :conditions=>{:admin=>true}).blank?
+if User.where(:admin=>true).first.blank?
 
   employee_category = EmployeeCategory.find_or_create_by(:name => 'System Admin',:prefix => 'Admin',:status => true)
 
@@ -66,7 +66,7 @@ end
   {"name" => 'Donation'       ,"description" => ' ',"is_income" => true},
   {"name" => 'Fee'            ,"description" => ' ',"is_income" => true}
 ].each do |param|
-  FinanceTransactionCategory.find_or_create(:name =>param)
+  FinanceTransactionCategory.find_or_create_by(param)
 end
 
 if Weekday.count == 0
@@ -92,7 +92,7 @@ end
   {"settings_key" => "AttendanceEnabled"                  ,"is_enabled" => false},
   {"settings_key" => "NewsEventsEnabled"                  ,"is_enabled" => false}
 ].each do |param|
-  SmsSetting.find_or_create_by(:settings_key => param)
+  SmsSetting.find_or_create_by(param)
 end
 
 
@@ -112,7 +112,7 @@ end
   {"name_tag" => "student_management", "priority"=>2},
   {"name_tag" => "social_other_activity", "priority"=>4},
 ].each do |param|
-  PrivilegeTag.find_or_create_by(:name_tag => param)
+  PrivilegeTag.find_or_create_by(param)
 end
 
 #add priorities to student additional fields with nil priority, if any
@@ -150,35 +150,35 @@ end
 #system_settings
 Privilege.reset_column_information
 system_settings_tag = PrivilegeTag.find_by(:name_tag =>'system_settings')
-Privilege.find_by(:name => 'GeneralSettings').update_attributes(:privilege_tag_id=>system_settings_tag.id, :priority=>10 )
-Privilege.find_by(:name => 'AddNewBatch').update_attributes(:privilege_tag_id=>system_settings_tag.id, :priority=>20 )
-Privilege.find_by(:name => 'SubjectMaster').update_attributes(:privilege_tag_id=>system_settings_tag.id, :priority=>30 )
-Privilege.find_by(:name => 'SMSManagement').update_attributes(:privilege_tag_id=>system_settings_tag.id, :priority=>40 )
+Privilege.find_by(:name => 'GeneralSettings').update_attributes(:privilege_tag_id=>system_settings_tag.id, :priority=>10 ) if Privilege.find_by(:name => 'GeneralSettings') 
+Privilege.find_by(:name => 'AddNewBatch').update_attributes(:privilege_tag_id=>system_settings_tag.id, :priority=>20 ) if Privilege.find_by(:name => 'AddNewBatch')
+Privilege.find_by(:name => 'SubjectMaster').update_attributes(:privilege_tag_id=>system_settings_tag.id, :priority=>30 ) if Privilege.find_by(:name =>'SubjectMaster')
+Privilege.find_by(:name => 'SMSManagement').update_attributes(:privilege_tag_id=>system_settings_tag.id, :priority=>40 ) if Privilege.find_by(:name =>'SMSManagement')
 
 
 #administration_operations
 administration_operations_tag = PrivilegeTag.find_by(:name_tag =>'administration_operations')
-Privilege.find_by(:name => 'HrBasics').update_attributes(:privilege_tag_id=>administration_operations_tag.id, :priority=>50 )
-Privilege.find_by(:name => 'EmployeeSearch').update_attributes(:privilege_tag_id=>administration_operations_tag.id, :priority=>60 )
-Privilege.find_by(:name => 'EmployeeAttendance').update_attributes(:privilege_tag_id=>administration_operations_tag.id, :priority=>70 )
-Privilege.find_by(:name => 'PayslipPowers').update_attributes(:privilege_tag_id=>administration_operations_tag.id, :priority=>80 )
-Privilege.find_by(:name => 'FinanceControl').update_attributes(:privilege_tag_id=>administration_operations_tag.id, :priority=>90 )
-Privilege.find_by(:name => 'EventManagement').update_attributes(:privilege_tag_id=>administration_operations_tag.id, :priority=>100 )
-Privilege.find_by(:name => 'ManageNews').update_attributes(:privilege_tag_id=>administration_operations_tag.id, :priority=>110 )
+Privilege.find_by(:name => 'HrBasics').update_attributes(:privilege_tag_id=>administration_operations_tag.id, :priority=>50 ) if Privilege.find_by(:name => 'HrBasics')
+Privilege.find_by(:name => 'EmployeeSearch').update_attributes(:privilege_tag_id=>administration_operations_tag.id, :priority=>60 ) if Privilege.find_by(:name => 'EmployeeSearch')
+Privilege.find_by(:name => 'EmployeeAttendance').update_attributes(:privilege_tag_id=>administration_operations_tag.id, :priority=>70 ) if Privilege.find_by(:name => 'EmployeeAttendance')
+Privilege.find_by(:name => 'PayslipPowers').update_attributes(:privilege_tag_id=>administration_operations_tag.id, :priority=>80 ) if Privilege.find_by(:name => 'PayslipPowers')
+Privilege.find_by(:name => 'FinanceControl').update_attributes(:privilege_tag_id=>administration_operations_tag.id, :priority=>90 ) if Privilege.find_by(:name => 'FinanceControl')
+Privilege.find_by(:name => 'EventManagement').update_attributes(:privilege_tag_id=>administration_operations_tag.id, :priority=>100 ) if Privilege.find_by(:name => 'EventManagement')
+Privilege.find_by(:name => 'ManageNews').update_attributes(:privilege_tag_id=>administration_operations_tag.id, :priority=>110 ) if Privilege.find_by(:name => 'ManageNews')
 #academics
 academics_tag = PrivilegeTag.find_by_name_tag('academics')
-Privilege.find_by(:name => 'ExaminationControl').update_attributes(:privilege_tag_id=>academics_tag.id, :priority=>230 )
-Privilege.find_by(:name => 'EnterResults').update_attributes(:privilege_tag_id=>academics_tag.id, :priority=>240 )
-Privilege.find_by(:name => 'ViewResults').update_attributes(:privilege_tag_id=>academics_tag.id, :priority=>250 )
-Privilege.find_by(:name => 'ManageTimetable').update_attributes(:privilege_tag_id=>academics_tag.id, :priority=>260 )
-Privilege.find_by(:name => 'TimetableView').update_attributes(:privilege_tag_id=>academics_tag.id, :priority=>270 )
+Privilege.find_by(:name => 'ExaminationControl').update_attributes(:privilege_tag_id=>academics_tag.id, :priority=>230 ) if Privilege.find_by(:name => 'ExaminationControl')
+Privilege.find_by(:name => 'EnterResults').update_attributes(:privilege_tag_id=>academics_tag.id, :priority=>240 ) if Privilege.find_by(:name => 'EnterResults')
+Privilege.find_by(:name => 'ViewResults').update_attributes(:privilege_tag_id=>academics_tag.id, :priority=>250 ) if Privilege.find_by(:name => 'ViewResults')
+Privilege.find_by(:name => 'ManageTimetable').update_attributes(:privilege_tag_id=>academics_tag.id, :priority=>260 ) if Privilege.find_by(:name => 'ManageTimetable')
+Privilege.find_by(:name => 'TimetableView').update_attributes(:privilege_tag_id=>academics_tag.id, :priority=>270 ) if Privilege.find_by(:name => 'TimetableView')
 #student_management
 student_management_tag = PrivilegeTag.find_by_name_tag('student_management')
-Privilege.find_by(:name => 'Admission').update_attributes(:privilege_tag_id=>student_management_tag.id, :priority=>280 )
-Privilege.find_by(:name => 'StudentsControl').update_attributes(:privilege_tag_id=>student_management_tag.id, :priority=>290 )
-Privilege.find_by(:name => 'StudentView').update_attributes(:privilege_tag_id=>student_management_tag.id, :priority=>300 )
-Privilege.find_by(:name => 'StudentAttendanceRegister').update_attributes(:privilege_tag_id=>student_management_tag.id, :priority=>310 )
-Privilege.find_by(:name => 'StudentAttendanceView').update_attributes(:privilege_tag_id=>student_management_tag.id, :priority=>320 )
+Privilege.find_by(:name => 'Admission').update_attributes(:privilege_tag_id=>student_management_tag.id, :priority=>280 ) if Privilege.find_by(:name => 'Admission')
+Privilege.find_by(:name => 'StudentsControl').update_attributes(:privilege_tag_id=>student_management_tag.id, :priority=>290 ) if Privilege.find_by(:name => 'StudentsControl')
+Privilege.find_by(:name => 'StudentView').update_attributes(:privilege_tag_id=>student_management_tag.id, :priority=>300 ) if Privilege.find_by(:name => 'StudentView')
+Privilege.find_by(:name => 'StudentAttendanceRegister').update_attributes(:privilege_tag_id=>student_management_tag.id, :priority=>310 ) if Privilege.find_by(:name => 'StudentAttendanceRegister')
+Privilege.find_by(:name => 'StudentAttendanceView').update_attributes(:privilege_tag_id=>student_management_tag.id, :priority=>320 ) if Privilege.find_by(:name => 'StudentAttendanceView')
 
 #update gender as string
 Employee.all.each do |e|
