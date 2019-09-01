@@ -1,6 +1,3 @@
-# TODO: maybe add one for :has_and_belongs_to_many?
-# TODO: Implement insertions for existing files... why??
-
 require 'rails_helper'
 
 RSpec.describe Batch, type: :model do
