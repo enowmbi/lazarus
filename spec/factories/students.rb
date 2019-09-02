@@ -24,7 +24,7 @@ FactoryBot.define do
     phone1 {"123456789"}
     phone2 {"123456789"}
     email {"john_doe@example.com"}
-    immediate_contact_id: integer
+    immediate_contact
     is_sms_enabled {true}
     status_description {"Single"}
     is_active {true}
