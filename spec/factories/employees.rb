@@ -25,12 +25,12 @@ FactoryBot.define do
     mother_name{ "string" }  
     husband_name{ "string" }  
     blood_group{ "string" }  
-    nationality_id{ 1 }  
+    country{ 1 }  
     home_address_line1{ "string" }  
     home_address_line2{ "string" }  
     home_city{ "string" }  
     home_state{ "string" }  
-    home_country_id{ 1 }  
+    country{ 1 }  
     home_pin_code{ "string" }  
     office_address_line1{ "string" }  
     office_address_line2{ "string" }  
