@@ -10,7 +10,6 @@ FactoryBot.define do
     job_title{ "string" }  
     employee_position_id{ 1 }  
     employee_department_id{ 1 }  
-    reporting_manager_id{ 1 }  
     employee_grade_id{ 1 }  
     qualification{ "string" }  
     experience_detail {"text"}  
