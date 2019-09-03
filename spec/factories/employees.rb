@@ -24,7 +24,7 @@ FactoryBot.define do
     mother_name{ "string" }  
     husband_name{ "string" }  
     blood_group{ "string" }  
-    country{ 1 }  
+    # country{ 1 }  
     home_address_line1{ "string" }  
     home_address_line2{ "string" }  
     home_city{ "string" }  
@@ -35,7 +35,7 @@ FactoryBot.define do
     office_address_line2{ "string" }  
     office_city{ "string" }  
     office_state{ "string" }  
-    office_country_id{ 1 }  
+    # office_country_id{ 1 }  
     office_pin_code{ "string" }  
     office_phone1{ "string" }  
     office_phone2{ "string" }  
