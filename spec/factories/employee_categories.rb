@@ -3,6 +3,6 @@ FactoryBot.define do
 		name {"Lecturer "}
 		prefix {"Mr."}
 		status { true }
-		school
+		# school
 	end
 end
