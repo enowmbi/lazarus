@@ -1,6 +1,6 @@
 FactoryBot.define do 
   factory :monthly_payslips do 
-    salary_date { Time.now }
+    salary_date { 2.years.ago }
     employee
     payroll_category
     amount {"100"}
@@ -9,7 +9,7 @@ FactoryBot.define do
     is_rejected { false }
     rejector_id {employee.id}
     reason {"Monthly payout"}
-    school
+    # school
     remark {"This is a remark"}
   end
 end
