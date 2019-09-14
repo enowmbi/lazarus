@@ -5,6 +5,6 @@ FactoryBot.define do
 		status { true }
 		max_hours_day { 8 }
 		max_hours_week {40 }
-		school
+		# school
 	end
 end
