@@ -41,4 +41,13 @@ FactoryBot.define do
     parent{true}
   end
 
+  factory :employee_user, parent: :user do 
+    sequence(:username){|n| "john_doe_employee_#{n}"}
+     email {"#{username}@example.com"}
+    student {false}
+    employee {true}
+    admin{false}
+    parent{false}
+  end
+
 end
