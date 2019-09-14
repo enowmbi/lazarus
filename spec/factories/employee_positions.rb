@@ -3,6 +3,6 @@ FactoryBot.define do
 		name { "Manager " }
 		employee_category
 		status { true }
-		school
+		# school
 	end
 end
