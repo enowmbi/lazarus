@@ -45,7 +45,7 @@ FactoryBot.define do
     email{ "employee@lazarus.com" }  
     fax{ "123-456-987" }  
     library_card{ "56897" }  
-    user 
+    employee_user 
   end
 
   factory :employee_1, parent: :employee
