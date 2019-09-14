@@ -2,12 +2,12 @@ FactoryBot.define do
   factory :student do 
     admission_no {"12345"}
     class_roll_no {"12345"}
-    admission_date { Time.now }
+    admission_date { 2.years.ago }
     first_name {"John " }
     middle_name {" Matter "}
     last_name { "Doe" }
     batch
-    date_of_birth {Time.now }
+    date_of_birth {20.years.ago }
     gender {"male"}
     blood_group {"A"}
     birth_place {"Manchester"}
@@ -31,9 +31,9 @@ FactoryBot.define do
     is_deleted {false}
     library_card {"xyz"}
     has_paid_fees { true }
-    user
+    student_user
     passport_number { "text" }
-    enrollment_date { Time.now }
+    enrollment_date { 2.years.ago }
     school
   end
 end
