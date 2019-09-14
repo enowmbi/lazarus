@@ -24,12 +24,11 @@ FactoryBot.define do
     mother_name{ "string" }  
     husband_name{ "string" }  
     blood_group{ "string" }  
-    # country{ 1 }  
     home_address_line1{ "string" }  
     home_address_line2{ "string" }  
     home_city{ "string" }  
     home_state{ "string" }  
-    country{ 1 }  
+    country   
     home_pin_code{ "string" }  
     office_address_line1{ "string" }  
     office_address_line2{ "string" }  
@@ -47,4 +46,6 @@ FactoryBot.define do
     user_id{ 1 }  
     school_id{ 1 }
   end
+
+  factory :employee_1, parent: :employee
 end
