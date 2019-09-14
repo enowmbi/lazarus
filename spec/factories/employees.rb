@@ -28,13 +28,14 @@ FactoryBot.define do
     home_address_line2{ "string" }  
     home_city{ "string" }  
     home_state{ "string" }  
-    country   
+    nationality_id {Country.first.id} 
+    home_country_id {Country.first.id}
     home_pin_code{ "string" }  
     office_address_line1{ "string" }  
     office_address_line2{ "string" }  
     office_city{ "string" }  
     office_state{ "string" }  
-    # office_country_id{ 1 }  
+    office_country_id {Country.first.id}  
     office_pin_code{ "string" }  
     office_phone1{ "string" }  
     office_phone2{ "string" }  
