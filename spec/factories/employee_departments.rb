@@ -3,6 +3,6 @@ FactoryBot.define do
     code {"Fin"}
     name {"Finance"}
     status { true }
-    school_id {School.first.id}
+    # school_id {School.first.id}
   end
 end
