@@ -1,52 +1,55 @@
 FactoryBot.define do 
   factory :employee do 
-    employee_category_id{ 1 }  
-    employee_number{ "string" }  
-    joining_date{  1979-02-28 }  
-    first_name{ "string" }  
-    middle_name{ "string" }  
-    last_name{ "string" }  
+    employee_category  
+    employee_number{ "123-456" }  
+    joining_date{  6.years.ago }  
+    first_name{ "James" }  
+    middle_name{ "Lee" }  
+    last_name{ "Doe" }  
     gender{  true }  
-    job_title{ "string" }  
-    employee_position_id{ 1 }  
-    employee_department_id{ 1 }  
-    employee_grade_id{ 1 }  
-    qualification{ "string" }  
-    experience_detail {"text"}  
+    job_title{ "Safty Manager" }  
+    employee_position  
+    employee_department 
+    reporting_manager
+    employee_grade 
+    qualification{ "Masters Degree" }  
+    experience_detail {"Advanced with 12 years of experience"}  
     experience_year{ 1 }  
     experience_month{ 1 }  
     status{  true }  
-    status_description{ "string" }  
-    date_of_birth{  1979-03-28 }  
-    marital_status{ "string" }  
+    status_description{ " Status Description" }  
+    date_of_birth{  40.years.ago }  
+    marital_status{ "Married" }  
     children_count{ 1 }  
-    father_name{ "string" }  
-    mother_name{ "string" }  
-    husband_name{ "string" }  
-    blood_group{ "string" }  
-    home_address_line1{ "string" }  
-    home_address_line2{ "string" }  
-    home_city{ "string" }  
-    home_state{ "string" }  
+    father_name{ "James Lee Doe Snr." }  
+    mother_name{ "Jenny Gabriel Doe" }  
+    husband_name{ "Humphrey S." }  
+    blood_group{ "Group A" }  
+    home_address_line1{ "3 Bank Street" }  
+    home_address_line2{ "Capitol" }  
+    home_city{ "Washington" }  
+    home_state{ "Washington" }  
     nationality_id {Country.first.id} 
     home_country_id {Country.first.id}
-    home_pin_code{ "string" }  
-    office_address_line1{ "string" }  
-    office_address_line2{ "string" }  
-    office_city{ "string" }  
-    office_state{ "string" }  
+    home_pin_code{ "0102" }  
+    office_address_line1{ "Capitol Building" }  
+    office_address_line2{ "Capitol" }  
+    office_city{ "Washington" }  
+    office_state{ "Washington" }  
     office_country_id {Country.first.id}  
-    office_pin_code{ "string" }  
-    office_phone1{ "string" }  
-    office_phone2{ "string" }  
-    mobile_phone{ "string" }  
-    home_phone{ "string" }  
+    office_pin_code{ "11111" }  
+    office_phone1{ "123-456-789" }  
+    office_phone2{ "123-456-789" }  
+    mobile_phone{ "667-941-484" }  
+    home_phone{ "123-456-789" }  
     email{ "employee@lazarus.com" }  
-    fax{ "string" }  
-    library_card{ "string" }  
-    user_id{ 1 }  
-    school_id{ 1 }
+    fax{ "123-456-987" }  
+    library_card{ "56897" }  
+    user 
   end
 
   factory :employee_1, parent: :employee
+  factory :reporting_manager, parent: :employee do 
+    reporting_manager_id {nil} 
+  end
 end
