@@ -1,9 +1,9 @@
 FactoryBot.define do 
   factory :batch  do 
     course 
-    name {"Batch"}
-    start_date {3.months.before}
-    end_date {1.months.after}
+    sequence(:name){|n| "Batch_#{n}"}
+    start_date {9.months.ago}
+    end_date {3.months.from_now}
     is_active {true}
     is_deleted {true}
     employee
@@ -11,9 +11,9 @@ FactoryBot.define do
   end
 
   factory :batch_1, :parent => :batch do 
-    name {"Batch 1"}
-    start_date {6.months.before}
-    end_date {1.month.before}
+    sequence(:name){|n| "Batch_1_#{n}"}
+    start_date {6.months.ago}
+    end_date {1.month.ago}
     employee_1
   end
 
