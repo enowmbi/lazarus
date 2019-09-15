@@ -1,7 +1,7 @@
 FactoryBot.define do 
   factory :employee_department do 
-    code {"Fin"}
-    name {"Finance"}
+    sequence(:code){|n| "Fin_#{n}"}
+    sequence(:name){|n| "Finance_#{n}"}
     status { true }
     # school_id {School.first.id}
   end
