@@ -39,7 +39,7 @@ class Course < ApplicationRecord
   scope :cce, lambda{select("courses.*").where(:grading_type => GRADINGTYPES.invert["CCE"]).order('course_name asc')}
 
   def presence_of_initial_batch
-    errors.add_to_base "#{I18n.t('should_have_an_initial_batch')}" if batches.length == 0
+    errors.add("Course", "#{I18n.t('should_have_an_initial_batch')}") if batches.length == 0
   end
 
   def inactivate
@@ -104,15 +104,15 @@ class Course < ApplicationRecord
   end
 
   def cce_enabled?
-    Configuration.cce_enabled? and grading_type == "3"
+    Config.cce_enabled? and grading_type == "3"
   end
 
   def gpa_enabled?
-    Configuration.has_gpa? and self.grading_type=="1"
+    Config.has_gpa? and self.grading_type=="1"
   end
 
   def cwa_enabled?
-    Configuration.has_cwa? and self.grading_type=="2"
+    Config.has_cwa? and self.grading_type=="2"
   end
 
   def normal_enabled?
