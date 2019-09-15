@@ -1,9 +1,9 @@
 require 'rails_helper'
 
 RSpec.describe Employee, type: :model do
-  before(:all) do 
-    Rails.application.load_seed
-  end
+  # before(:all) do 
+    # Rails.application.load_seed
+  # end
 
   it "should have a valid factory" do
     employee = FactoryBot.build(:employee)
