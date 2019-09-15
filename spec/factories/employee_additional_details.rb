@@ -3,7 +3,7 @@ FactoryBot.define do
     employee
     additional_field
     additional_info {" Strengths"}
-    school
+    # school
   end
 end
 
