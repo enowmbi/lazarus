@@ -209,6 +209,8 @@ GEM
       sprockets (>= 2.8, < 4.0)
       sprockets-rails (>= 2.0, < 4.0)
       tilt (>= 1.1, < 3)
+    shoulda-matchers (4.1.2)
+      activesupport (>= 4.2.0)
     simplecov (0.16.1)
       docile (~> 1.1)
       json (>= 1.8, < 3)
@@ -285,6 +287,7 @@ DEPENDENCIES
   rails-erd
   rspec-rails
   sass-rails (~> 5.0)
+  shoulda-matchers
   simplecov
   spec_writer
   spring

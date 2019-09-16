@@ -76,6 +76,9 @@ group :development, :test do
 
   #Add factory_bot rails 
   gem 'factory_bot_rails'
+
+  #Add shoulda matchers
+  gem 'shoulda-matchers'
 end
 
 group :development do
