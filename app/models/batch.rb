@@ -50,18 +50,22 @@ class Batch < ApplicationRecord
   delegate :grading_type, :cce_enabled?, :observation_groups, :cce_weightages, :to=>:course
 
   validates_presence_of :name, :start_date, :end_date
+  validate :start_date_must_be_less_than_end_date
 
   attr_accessor :job_type
+
 
   scope :active,lambda{joins(:course).where(:is_deleted => false, :is_active =>true).select("batches.*,CONCAT(courses.code,'-',batches.name) as course_full_name").order("course_full_name")}
   scope :inactive,lambda{joins(:course).where(:is_deleted => false, :is_active => false).select("batches.*,CONCAT(courses.code,'-',batches.name) as course_full_name").order("course_full_name")}
   scope :deleted,lambda{joins(:course).where(:is_deleted => true).select("batches.*,CONCAT(courses.code,'-',batches.name) as course_full_name").order("course_full_name")}
   scope :cce, lambda{joins(:course).select("batches.*").where(["courses.grading_type = #{GRADINGTYPES.invert['CCE']}"]).order('code')}
 
-  def validate
-    errors.add(:start_date, "#{I18n.t('should_be_before_end_date')}.") \
-      if self.start_date > self.end_date \
-      if self.start_date and self.end_date
+  def start_date_must_be_less_than_end_date
+    if self.start_date and self.end_date
+      if self.start_date > self.end_date 
+        errors.add(:start_date, "#{I18n.t('should_be_before_end_date')}.")
+      end
+    end
   end
 
   def full_name
@@ -71,7 +75,7 @@ class Batch < ApplicationRecord
   def course_section_name
     "#{course_name} - #{section_name}"
   end
-  
+
   def inactivate
     update_attribute(:is_deleted, true)
     self.employees_subjects.destroy_all
@@ -93,7 +97,7 @@ class Batch < ApplicationRecord
   def normal_batch_subject
     Subject.where(["batch_id=? AND elective_group_id IS NULL AND is_deleted = false",self.id])
   end
-  
+
   def elective_batch_subject(elect_group)
     Subject.where(["batch_id =? AND elective_group_id =? AND elective_group_id IS NOT NULL AND is_deleted = false",self.id,elect_group])
   end
@@ -129,7 +133,7 @@ class Batch < ApplicationRecord
     end
     return event_holidays #array of holiday event dates
   end
-  
+
   def return_holidays(start_date,end_date)
     @common_holidays ||= Event.holidays.is_common
     @batch_holidays=self.events.where({:is_holiday=>true})
@@ -557,7 +561,7 @@ class Batch < ApplicationRecord
     end
   end
 
-  
+
 
   def subject_hours(starting_date,ending_date,subject_id)
     unless subject_id == 0
@@ -612,7 +616,7 @@ class Batch < ApplicationRecord
   def fa_groups
     FaGroup.joins(:subjects).where({:subjects=>{:batch_id=>id}}).uniq
   end
-  
+
   def create_scholastic_reports
     report_hash={}
     fa_groups.each do |fg|
@@ -656,7 +660,7 @@ class Batch < ApplicationRecord
 
   def perform
     #this is for cce_report_generation use flags if need job for other works
-    
+
     if job_type=="1"
       generate_batch_reports
     elsif job_type=="2"
@@ -685,6 +689,6 @@ class Batch < ApplicationRecord
   def user_is_authorized?(u)
     employees.collect(&:user_id).include? u.id
   end
-  
-  
+
+
 end
