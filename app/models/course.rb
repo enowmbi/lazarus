@@ -21,7 +21,7 @@ class Course < ApplicationRecord
   GRADINGTYPES = {"1"=>"GPA","2"=>"CWA","3"=>"CCE"}
   
   validates_presence_of :course_name, :code
-  validate :presence_of_initial_batch, :on => :create
+ #TODO: # validate :presence_of_initial_batch, :on => :create
 
   has_many :batches
   has_many :batch_groups
