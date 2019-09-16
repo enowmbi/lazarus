@@ -16,6 +16,6 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 class School < ApplicationRecord
-  has_many :batch_students
- validates_presence_of :name
+ has_many :batch_students
+ validates :name, presence: true, uniqueness: true
 end
