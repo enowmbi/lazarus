@@ -1,8 +1,8 @@
 FactoryBot.define do 
   factory :school do 
-    name {"Institute of Technology"}
-    code {"001"}
-  end
+    sequence(:name) {|n| "Institute of Technology #{n}"}
+    sequence(:code) {|n| "IoT #{n}"}
+  end 
 end
 
 
