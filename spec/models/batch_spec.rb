@@ -224,8 +224,4 @@ RSpec.describe Batch, type: :model do
 
   end
 
-
-  describe "Behavior" do
-    pending "add some examples to #{__FILE__} for behaviours or delete the 'Behaviour' test there."
-  end
 end
