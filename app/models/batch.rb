@@ -29,7 +29,7 @@ class Batch < ApplicationRecord
   has_many :subjects, lambda{where(:is_deleted => false)}
   has_many :employees_subjects, :through =>:subjects
   has_many :exam_groups
-  has_many :fee_category , :class_name => "FinanceFeeCategory"
+  has_many :fee_categories , :class_name => "FinanceFeeCategory"
   has_many :elective_groups
   has_many :finance_fee_collections
   has_many :finance_transactions, :through => :students
