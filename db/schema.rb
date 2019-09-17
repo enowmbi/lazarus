@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2019_08_07_093105) do
+ActiveRecord::Schema.define(version: 2019_09_17_055626) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -726,6 +726,7 @@ ActiveRecord::Schema.define(version: 2019_08_07_093105) do
     t.datetime "updated_at"
     t.integer "school_id"
     t.string "grading_type"
+    t.boolean "cce_enabled"
     t.index ["grading_type"], name: "index_courses_on_grading_type"
     t.index ["school_id"], name: "index_courses_on_school_id"
   end
@@ -1880,6 +1881,7 @@ ActiveRecord::Schema.define(version: 2019_08_07_093105) do
     t.datetime "updated_at"
     t.boolean "lower_limit", default: false
     t.boolean "full_course", default: false
+    t.integer "course_id"
   end
 
   create_table "registration_courses", force: :cascade do |t|
