@@ -46,19 +46,7 @@ RSpec.describe Batch, type: :model do
 
     it{is_expected.to have_many(:exam_groups)}
 
-    it{is_expected.to have_many(:fee_categories)}
-
-   # it "should allow multiple fee_category" do
-    # batch = FactoryBot.create(:batch)
-
-    # 3.times.each do |n|
-    # fee_category = FactoryBot.create(:finance_fee_category)
-    # batch.fee_category << fee_category
-    # batch_fee_category = batch.fee_category
-    # expect(batch_fee_category.count).to eq n.next
-    # expect(batch_fee_category).to include fee_category
-    # end
-    # end
+    it{is_expected.to have_many(:fee_categories).class_name('FinanceFeeCategory')}
 
     it {is_expected.to have_many(:elective_groups)}
 
