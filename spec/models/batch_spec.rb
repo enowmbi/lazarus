@@ -20,10 +20,7 @@ RSpec.describe Batch, type: :model do
     it "ensures that start_date is less than end_date" do 
       course = FactoryBot.create(:course)
       batch = course.batches.build(FactoryBot.attributes_for(:batch))
-
       batch.start_date = 1.year.from_now
-      p batch
-      puts "==============="
       expect(batch).not_to be_valid 
     end
 
