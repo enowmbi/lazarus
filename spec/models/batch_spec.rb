@@ -12,7 +12,9 @@ RSpec.describe Batch, type: :model do
   describe "Validators" do
 
     it {is_expected.to validate_presence_of(:name)}
+
     it {is_expected.to validate_presence_of(:start_date)}
+    
     it {is_expected.to validate_presence_of(:end_date)}
 
     it "ensures that start_date is less than end_date" do 
@@ -20,8 +22,9 @@ RSpec.describe Batch, type: :model do
       batch = course.batches.build(FactoryBot.attributes_for(:batch))
 
       batch.start_date = 1.year.from_now
-      # expect{batch.start_date_must_be_less_than_end_date}.to raise_error.with_message(/start date should be before end date/)
-      # it {is_expected.not_to validate(:start_date_must_be_less_than_end_date)}
+      p batch
+      puts "==============="
+      expect(batch).not_to be_valid 
     end
 
   end
