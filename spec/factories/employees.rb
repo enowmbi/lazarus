@@ -10,7 +10,7 @@ FactoryBot.define do
     job_title{ "Safty Manager" }  
     employee_position  
     employee_department 
-    reporting_manager
+    # reporting_manager
     employee_grade 
     qualification{ "Masters Degree" }  
     experience_detail {"Advanced with 12 years of experience"}  
@@ -29,14 +29,14 @@ FactoryBot.define do
     home_address_line2{ "Capitol" }  
     home_city{ "Washington" }  
     home_state{ "Washington" }  
-    nationality_id {Country.first.id} 
-    home_country_id {Country.first.id}
+    # nationality_id {101} 
+    # home_country_id {Country.first.id}
     home_pin_code{ "0102" }  
     office_address_line1{ "Capitol Building" }  
     office_address_line2{ "Capitol" }  
     office_city{ "Washington" }  
     office_state{ "Washington" }  
-    office_country_id {Country.first.id}  
+    # office_country_id {Country.first.id}  
     office_pin_code{ "11111" }  
     office_phone1{ "123-456-789" }  
     office_phone2{ "123-456-789" }  
@@ -45,7 +45,7 @@ FactoryBot.define do
     email{ "employee@lazarus.com" }  
     fax{ "123-456-987" }  
     library_card{ "56897" }  
-    employee_user 
+    # employee_user 
   end
 
   factory :employee_1, parent: :employee
