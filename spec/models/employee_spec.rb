@@ -1,9 +1,6 @@
 require 'rails_helper'
 
 RSpec.describe Employee, type: :model do
-  # before(:all) do 
-    # Rails.application.load_seed
-  # end
 
   it "should have a valid factory" do
     employee = FactoryBot.build(:employee)
@@ -11,8 +8,6 @@ RSpec.describe Employee, type: :model do
   end
 
   describe "Validators" do
-
-
 
     it "should ensure the presence of employee_category" do
       employee = FactoryBot.build(:employee, employee_category: nil)
