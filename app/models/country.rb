@@ -17,5 +17,7 @@
 #limitations under the License.
 
 class Country < ApplicationRecord
+
+  validates :name, presence: true, uniqueness: true
   default_scope lambda{order('name ASC')}
 end
