@@ -25,11 +25,7 @@ RSpec.describe Employee, type: :model do
       expect(new_employee.errors[:employee_number]).to be_present
     end
 
-
-
   end
-
-
 
   describe "Associations" do
 
@@ -206,13 +202,10 @@ RSpec.describe Employee, type: :model do
       end
     end
 
-
   end
 
 
-
-  describe "Graceful Destroyal" do
-
+ xdescribe "Graceful Destroyal" do
 
     it "should destroy the associated photo_attachment when deleted" do
       employee = FactoryBot.create(:employee)
@@ -223,16 +216,12 @@ RSpec.describe Employee, type: :model do
     end
 
 
-
-
-
     it "should destroy the associated employees_subjects when deleted" do
       employee = FactoryBot.create(:employee)
       employee.employees_subjects.create(FactoryBot.attributes_for(:employees_subject))
 
       expect{ employee.destroy }.to change(EmployeesSubject, :count).by(-1)
     end
-
 
 
     it "should destroy the associated timetable_entries when deleted" do
