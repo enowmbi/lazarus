@@ -7,21 +7,12 @@ RSpec.describe ArchivedStudent, type: :model do
   end
 
   describe "Validators" do
-
-
-
     it "should ensure the presence of country" do
       archived_student = FactoryBot.build(:archived_student, country: nil)
       expect(archived_student).not_to be_valid
       expect(archived_student.errors[:country]).to be_present
     end
-
-
-
-
   end
-
-
 
   describe "Associations" do
 
