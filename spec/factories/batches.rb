@@ -6,7 +6,7 @@ FactoryBot.define do
     end_date {3.months.from_now}
     is_active {true}
     is_deleted {true}
-    employee
+    employee_id {Employee.last}
     grading_type {"CCE"}
   end
 
