@@ -22,7 +22,7 @@ class UserController < ApplicationController
   before_action :only_admin_allowed, :only => [:edit, :create, :index, :edit_privilege, :user_change_password,:delete,:list_user,:all]
   before_action :protect_user_data, :only => [:profile, :user_change_password]
   before_action :check_if_loggedin, :only => [:login]
-  #  filter_access_to :edit_privilege
+   # filter_access_to :edit_privilege
   def choose_layout
     return 'login' if action_name == 'login' or action_name == 'set_new_password'
     return 'forgotpw' if action_name == 'forgot_password'

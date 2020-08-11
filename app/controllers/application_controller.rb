@@ -19,11 +19,11 @@
 class ApplicationController < ActionController::Base
   helper_method :can_access_request?
   
-  #TODO uncomment before_action { |c| Authorization.current_user = c.current_user }
-  before_action :message_user
-  before_action :set_user_language
-  before_action :set_variables
-  before_action :login_check
+  #AUTHORIZATION before_action { |c| Authorization.current_user = c.current_user }
+  # before_action :message_user
+  # before_action :set_user_language
+  # before_action :set_variables
+  # before_action :login_check
 
   before_action :dev_mode
   include CustomInPlaceEditing
